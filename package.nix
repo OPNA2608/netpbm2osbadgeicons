@@ -13,7 +13,7 @@ stdenv.mkDerivation (finalAttrs: {
   buildPhase = ''
     runHook preBuild
 
-    $CC -std=c99 -Wall -Wextra -pedantic -Werror $src -o netpbm2osbadgeicons
+    $CC -std=c99 -Wall -Wextra -pedantic -Werror -Wno-error=unused-parameter $src -o netpbm2osbadgeicons -lm
 
     runHook postBuild
   '';

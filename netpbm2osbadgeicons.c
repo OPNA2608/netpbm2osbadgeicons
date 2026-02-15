@@ -103,7 +103,7 @@ struct netpbmFile {
 	unsigned int depth;
 };
 
-bool openNetpbmFile (struct netpbmFile** outFile, char* path, char* magic, char* magicAlt) {
+bool openNetpbmFile (struct netpbmFile** outFile, char* path, bool ppmAllowed) {
 	bool ret = true;
 	struct netpbmFile* tempFile;
 	char buffer[8];
@@ -122,18 +122,30 @@ bool openNetpbmFile (struct netpbmFile** outFile, char* path, char* magic, char*
 	fprintf (
 		stderr,
 		"Checking %s for magic: %s%s%s\n",
-		path, magic, (magicAlt != NULL) ? " " : "", (magicAlt != NULL) ? magicAlt : ""
+		path,
+		ppmAllowed ? binaryPpmMagic : binaryPgmMagic,
+		ppmAllowed ? " " : "",
+		ppmAllowed ? binaryPgmMagic : ""
 	);
 	if (fread (buffer, sizeof (char), 2, tempFile->file) != 2) {
 		fprintf (stderr, "Failed to read magic bytes from: %s\n", path);
 		goto fail;
 	}
-	if (memcmp (buffer, binaryPpmMagic, 2) != 0) goto fail;
-	fprintf (stderr, "Magic number %s found.\n", binaryPpmMagic);
+	if (ppmAllowed && (memcmp (buffer, binaryPpmMagic, 2) == 0)) {
+		fprintf (stderr, "Identified: binary PPM\n");
+		tempFile->type = PPM;
+	} else if (memcmp (buffer, binaryPgmMagic, 2) == 0) {
+		fprintf (stderr, "Identified: binary PGM\n");
+		tempFile->type = PGM;
+	} else {
+		fprintf (stderr, "Illegal file magic: %c%c\n", buffer[0], buffer[1]);
+		goto fail;
+	}
 
 	fprintf (stderr, "DUMMY: openNetpbmFile\n");
 	goto fail;
 
+	/* TODO: Read & set dimensions and depth */
 	*outFile = tempFile;
 	goto end;
 
@@ -145,7 +157,7 @@ fail:
 			tempFile->file = NULL;
 		}
 		*outFile = NULL;
-		free (outFile);
+		free (tempFile);
 	}
 
 end:
@@ -196,18 +208,18 @@ int main (int argc, char** argv) {
 		goto end;
 	}
 
-	if (!openNetpbmFile (&inputFiles[0], argv[1], binaryPpmMagic, binaryPgmMagic)) goto fail;
+	if (!openNetpbmFile (&inputFiles[0], argv[1], true)) goto fail;
 
 	if (
 		(argc > 2)
 		&& (strcmp (argv[2], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[1], argv[2], binaryPpmMagic, binaryPgmMagic)
+		&& !openNetpbmFile (&inputFiles[1], argv[2], true)
 	) goto fail;
 
 	if (
 		(argc > 3)
 		&& (strcmp (argv[3], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[2], argv[3], binaryPgmMagic, NULL)
+		&& !openNetpbmFile (&inputFiles[2], argv[3], false)
 	) goto fail;
 
 	if (!checkImageDimensions (inputFiles[0], inputFiles[1], inputFiles[2])) goto fail;
