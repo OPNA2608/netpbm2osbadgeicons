@@ -34,9 +34,9 @@
 	TODO: Check if colour may be closer to a high-precision R/G/B/BW entry
 */
 uint8_t getClosestColourValue (double rIntensity, double gIntensity, double bIntensity) {
-	uint8_t r = round (5 * rIntensity);
-	uint8_t g = round (5 * gIntensity);
-	uint8_t b = round (5 * bIntensity);
+	uint8_t r = (uint8_t) (round (5 * rIntensity));
+	uint8_t g = (uint8_t) (round (5 * gIntensity));
+	uint8_t b = (uint8_t) (round (5 * bIntensity));
 
 	DEBUG (
 		"Intensity: "
