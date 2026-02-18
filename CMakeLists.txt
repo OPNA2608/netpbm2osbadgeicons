@@ -51,6 +51,11 @@ if (NETPBM2OSBADGEICONS_WERROR)
     list (APPEND PRIVATE_COMPILE_OPTIONS "-Werror")
   endif()
 
+  # don't care about *_s functions on MSVC
+  if (MSVC)
+    list (APPEND PRIVATE_COMPILE_OPTIONS "/D_CRT_SECURE_NO_WARNINGS")
+  endif()
+
   # unused function parameter in placeholder function
   if (MSVC)
     list (APPEND PRIVATE_COMPILE_OPTIONS "/wd4100")
