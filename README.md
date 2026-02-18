@@ -81,4 +81,5 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 ## License
 
-This software is licensed as GPL-3.0-or-later. See `LICENSE.md` for the full text of the GPLv3 license.
+This software is licensed as GPL-3.0-or-later. See `LICENSE.txt` in the root of the repository for the full text of the
+GPLv3 license.
