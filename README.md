@@ -79,6 +79,11 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ```
 
+## Rules/ideas you must abide by when contributing
+
+- Trans rights.
+- Do not use LLMs in any way. Go away.
+
 ## License
 
 This software is licensed as GPL-3.0-or-later. See `LICENSE.txt` in the root of the repository for the full text of the
