@@ -269,8 +269,18 @@ bool convertToPalettedRaster (struct netpbmFile* file) {
 	for (y = 0; y < file->height; ++y) {
 		for (x = 0; x < file->width; ++x) {
 			if (fread (&r, sizeof (uint8_t), 1, file->file) != 1) goto fail;
-			if (fread (&g, sizeof (uint8_t), 1, file->file) != 1) goto fail;
-			if (fread (&b, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+
+			if (file->type == PPM) {
+				if (fread (&g, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			} else {
+				g = r;
+			}
+
+			if (file->type == PPM) {
+				if (fread (&b, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			} else {
+				b = r;
+			}
 
 			DEBUG (
 				"Original RGB: "
@@ -311,9 +321,34 @@ void dummyPalettedRaster (struct netpbmFile* primary) {
 }
 
 bool convertToAlphaMask (struct netpbmFile* file) {
-	fflush (stdout);
-	fprintf (stderr, "PLACEHOLDER: convertToAlphaMask\n");
-	return false;
+	bool ret = true;
+	unsigned int x, y;
+	uint8_t a;
+
+	if (!readUntilNextElement (file->file)) goto fail;
+
+	for (y = 0; y < file->height; ++y) {
+		for (x = 0; x < file->width; ++x) {
+			if (fread (&a, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+
+			DEBUG (
+				"Original alpha: "
+				"%03u\n",
+				a
+			);
+
+			printf ("%02X", a);
+		}
+		printf ("\n");
+	}
+
+	goto end;
+
+fail:
+	ret = false;
+
+end:
+	return ret;
 }
 
 void dummyAlphaMask (struct netpbmFile* primary) {
