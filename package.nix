@@ -1,28 +1,34 @@
 {
   lib,
   stdenv,
+  runCommand,
+  cmake,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
   pname = "netpbm2osbadgeicons";
   version = lib.strings.trim (lib.strings.readFile ./version);
 
-  src = ./netpbm2osbadgeicons.c;
-  dontUnpack = true;
+  src =
+    let
+      srcs = [
+        "CMakeLists.txt"
+        "version"
+        "netpbm2osbadgeicons.c"
+      ];
+    in
+    runCommand "netpbm2osbadgeicons-src" { } (
+      ''
+        mkdir $out
+      ''
+      + (lib.strings.concatMapStringsSep "\n" (
+        filename: "ln -vs ${./. + "/${filename}"} $out/${filename}"
+      ) srcs)
+    );
 
-  buildPhase = ''
-    runHook preBuild
+  strictDeps = true;
 
-    $CC -std=c99 -Wall -Wextra -pedantic -Werror -Wno-error=unused-parameter $src -o netpbm2osbadgeicons -lm
-
-    runHook postBuild
-  '';
-
-  installPhase = ''
-    runHook preInstall
-
-    install -Dm755 netpbm2osbadgeicons -t $out/bin
-
-    runHook postInstall
-  '';
+  nativeBuildInputs = [
+    cmake
+  ];
 })
