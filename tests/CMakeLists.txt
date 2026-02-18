@@ -23,12 +23,17 @@ foreach (TESTDIR_FULL IN LISTS TESTDIRS)
   set (TESTARGS)
   list (APPEND TESTARGS "${TESTDIR}/primary")
 
-  if (EXISTS "${TESTDIR_FULL}/secondary")
-    list (APPEND TESTARGS "${TESTDIR}/secondary")
-  endif()
-
   if (EXISTS "${TESTDIR_FULL}/alpha")
+    if (EXISTS "${TESTDIR_FULL}/secondary")
+      list (APPEND TESTARGS "${TESTDIR}/secondary")
+    else()
+      list (APPEND TESTARGS "none")
+    endif()
     list (APPEND TESTARGS "${TESTDIR}/alpha")
+  else()
+    if (EXISTS "${TESTDIR_FULL}/secondary")
+      list (APPEND TESTARGS "${TESTDIR}/secondary")
+    endif()
   endif()
 
   add_test (NAME "${TESTDIR}"
