@@ -68,6 +68,16 @@ jobs:
           cmake --build build \
             "${BUILD_ARGS[@]}"
 
+      - name: Test
+        run: |
+          TEST_ARGS=(
+            --build-config "${{ matrix.build-type }}"
+          )
+
+          ctest build \
+            "${TEST_ARGS[@]}"
+
+
       - name: Install
         run: |
           INSTALL_ARGS=(
