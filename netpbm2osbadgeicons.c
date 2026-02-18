@@ -5,7 +5,19 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef NDEBUG
+#	define DEBUG(...) ((void)0)
+#else
+#	define DEBUG(...) fprintf (stderr, __VA_ARGS__)
+#endif
+
+#define ERROR(...) {\
+	fprintf (stderr, __VA_ARGS__);\
+	goto fail;\
+}
+
 #define RASTER_COUNT 3
+#define DEPTH_LIMIT 0xFF
 
 /*
 	palette consists of:
@@ -26,14 +38,14 @@ uint8_t getClosestColourValue (double rIntensity, double gIntensity, double bInt
 	uint8_t g = round (5 * gIntensity);
 	uint8_t b = round (5 * bIntensity);
 
-	fprintf (stderr,
+	DEBUG (
 		"Intensity: "
 		"%lf|"
 		"%lf|"
 		"%lf\n",
 		rIntensity, gIntensity, bIntensity
 	);
-	fprintf (stderr,
+	DEBUG (
 		"Newval: "
 		"%u|"
 		"%u|"
@@ -111,41 +123,48 @@ bool openNetpbmFile (struct netpbmFile** outFile, char* path, bool ppmAllowed) {
 	tempFile = malloc (sizeof (struct netpbmFile));
 	if (tempFile == NULL) goto fail;
 
-	fprintf (stderr, "Opening Netpbm file: %s\n", path);
+	DEBUG ("Opening Netpbm file: %s\n", path);
 	tempFile->file = fopen (path, "rb");
-	if (tempFile->file == NULL) {
-		fprintf (stderr, "Failed to open Netpbm file: %s\n", path);
-		goto fail;
-	}
-	fprintf (stderr, "Netpbm file opened: %s\n", path);
+	if (tempFile->file == NULL)
+		ERROR ("Failed to open Netpbm file: %s\n", path);
+	DEBUG ("Netpbm file opened: %s\n", path);
 
-	fprintf (
-		stderr,
+	DEBUG (
 		"Checking %s for magic: %s%s%s\n",
 		path,
 		ppmAllowed ? binaryPpmMagic : binaryPgmMagic,
 		ppmAllowed ? " " : "",
 		ppmAllowed ? binaryPgmMagic : ""
 	);
-	if (fread (buffer, sizeof (char), 2, tempFile->file) != 2) {
-		fprintf (stderr, "Failed to read magic bytes from: %s\n", path);
-		goto fail;
-	}
+	if (fread (buffer, sizeof (char), 2, tempFile->file) != 2)
+		ERROR ("Failed to read magic bytes from: %s\n", path);
 	if (ppmAllowed && (memcmp (buffer, binaryPpmMagic, 2) == 0)) {
-		fprintf (stderr, "Identified: binary PPM\n");
+		DEBUG ("Identified: binary PPM\n");
 		tempFile->type = PPM;
 	} else if (memcmp (buffer, binaryPgmMagic, 2) == 0) {
-		fprintf (stderr, "Identified: binary PGM\n");
+		DEBUG ("Identified: binary PGM\n");
 		tempFile->type = PGM;
-	} else {
-		fprintf (stderr, "Illegal file magic: %c%c\n", buffer[0], buffer[1]);
-		goto fail;
-	}
+	} else
+		ERROR ("Illegal file magic: %c%c\n", buffer[0], buffer[1]);
 
-	fprintf (stderr, "DUMMY: openNetpbmFile\n");
-	goto fail;
+	DEBUG ("Reading image width.\n");
+	if (!readUntilNextElement (tempFile->file)) goto fail;
+	if (fscanf (tempFile->file, "%u", &tempFile->width) != 1)
+		ERROR ("Failed to read image width.\n");
+	DEBUG ("Width: %u\n", tempFile->width);
 
-	/* TODO: Read & set dimensions and depth */
+	DEBUG ("Reading image height.\n");
+	if (!readUntilNextElement (tempFile->file)) goto fail;
+	if (fscanf (tempFile->file, "%u", &tempFile->height) != 1)
+		ERROR ("Failed to read image height.\n");
+	DEBUG ("Height: %u\n", tempFile->height);
+
+	DEBUG ("Reading image depth.\n");
+	if (!readUntilNextElement (tempFile->file)) goto fail;
+	if (fscanf (tempFile->file, "%u", &tempFile->depth) != 1)
+		ERROR ("Failed to read image depth.\n");
+	DEBUG ("Depth: %u\n", tempFile->depth);
+
 	*outFile = tempFile;
 	goto end;
 
@@ -164,47 +183,158 @@ end:
 	return ret;
 }
 
-bool checkImageDimensions (
+bool checkImageParameters (
 	struct netpbmFile* primaryFile,
 	struct netpbmFile* secondaryFile,
 	struct netpbmFile* alphaFile
 ) {
-	fprintf (stderr, "DUMMY: checkImageDimensions\n");
-	return false;
+	bool ret = true;
+
+	if (primaryFile->width > 52)
+		ERROR ("Primary image has invalid width (>52): %u\n", primaryFile->width);
+
+	if (primaryFile->height > 52)
+		ERROR ("Primary image has invalid height (>52): %u\n", primaryFile->height);
+
+	if (primaryFile->depth > DEPTH_LIMIT)
+		ERROR (
+			"TODO: Primary image's depth (%u) larger than what we can currently handle (%u)\n",
+			primaryFile->depth,
+			DEPTH_LIMIT
+		);
+
+	if (secondaryFile != NULL) {
+		if (secondaryFile->width != primaryFile->width)
+			ERROR (
+				"Secondary image's width (%u) doesn't match primary image's width (%u)\n",
+				secondaryFile->width,
+				primaryFile->width
+			);
+
+		if (secondaryFile->height != primaryFile->height)
+			ERROR (
+				"Secondary image's height (%u) doesn't match primary image's height (%u)\n",
+				secondaryFile->height,
+				primaryFile->height
+			);
+
+		if (secondaryFile->depth > 0xFF)
+			ERROR (
+				"TODO: Secondary image's depth (%u) larger than what we can currently handle (%u)\n",
+				secondaryFile->depth,
+				DEPTH_LIMIT
+			);
+	}
+
+	if (alphaFile != NULL) {
+		if (alphaFile->width != primaryFile->width)
+			ERROR (
+				"Alpha mask's width (%u) doesn't match primary image's width (%u)\n",
+				alphaFile->width,
+				primaryFile->width
+			);
+
+		if (alphaFile->height != primaryFile->height)
+			ERROR (
+				"Alpha mask's height (%u) doesn't match primary image's height (%u)\n",
+				alphaFile->height,
+				primaryFile->height
+			);
+
+		if (alphaFile->depth > 0xFF)
+			ERROR (
+				"TODO: Alpha mask's depth (%u) larger than what we can currently handle (%u)\n",
+				secondaryFile->depth,
+				DEPTH_LIMIT
+			);
+	}
+
+	goto end;
+
+fail:
+	ret = false;
+
+end:
+	return ret;
 }
 
 bool convertToPalettedRaster (struct netpbmFile* file) {
-	fprintf (stderr, "DUMMY: convertToPalettedRaster\n");
-	return false;
+	bool ret = true;
+	unsigned int x, y;
+	uint8_t r, g, b, paletteEntry;
+
+	if (!readUntilNextElement (file->file)) goto fail;
+
+	for (y = 0; y < file->height; ++y) {
+		for (x = 0; x < file->width; ++x) {
+			if (fread (&r, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			if (fread (&g, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			if (fread (&b, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+
+			DEBUG (
+				"Original RGB: "
+				"%03u|"
+				"%03u|"
+				"%03u\n",
+				r, g, b
+			);
+
+			paletteEntry = getClosestColourValue (
+				((double)r) / file->depth,
+				((double)g) / file->depth,
+				((double)b) / file->depth
+			);
+			printf ("%02X", paletteEntry);
+		}
+		printf ("\n");
+	}
+
+	goto end;
+
+fail:
+	ret = false;
+
+end:
+	return ret;
 }
 
 void dummyPalettedRaster (struct netpbmFile* primary) {
-	fprintf (stderr, "DUMMY: dummyPalettedRaster\n");
+	unsigned int x, y;
+
+	for (y = 0; y < primary->height; ++y) {
+		for (x = 0; x < primary->width; ++x) {
+			printf ("%02X", 255);
+		}
+		printf ("\n");
+	}
 }
 
 bool convertToAlphaMask (struct netpbmFile* file) {
-	fprintf (stderr, "DUMMY: convertToAlphaMask\n");
+	fprintf (stderr, "PLACEHOLDER: convertToAlphaMask\n");
 	return false;
 }
 
 void dummyAlphaMask (struct netpbmFile* primary) {
-	fprintf (stderr, "DUMMY: dummyAlphaMask\n");
+	unsigned int x, y;
+
+	for (y = 0; y < primary->height; ++y) {
+		for (x = 0; x < primary->width; ++x) {
+			printf ("%02X", 255);
+		}
+		printf ("\n");
+	}
 }
 
 int main (int argc, char** argv) {
 	int ret = 0;
 	struct netpbmFile* inputFiles[RASTER_COUNT];
-	//char buffer[8];
-	//unsigned int width, height, depth;
-	//uint8_t x, y, r, g, b, paletteEntry;
-	//long startPpmPixelData;
 
 	inputFiles[0] = NULL;
 	inputFiles[1] = NULL;
 	inputFiles[2] = NULL;
 
 	if (argc < 2 || argc > 4) {
-		printf ("Usage: primary.<ppm|pgm> [secondary.<ppm|pgm>] [alphamask.pgm]\n");
+		printf ("Usage: primary.<ppm|pgm> [<secondary.<ppm|pgm>|\"none\">] [<alphamask.pgm|\"none\">]\n");
 		goto end;
 	}
 
@@ -222,94 +352,31 @@ int main (int argc, char** argv) {
 		&& !openNetpbmFile (&inputFiles[2], argv[3], false)
 	) goto fail;
 
-	if (!checkImageDimensions (inputFiles[0], inputFiles[1], inputFiles[2])) goto fail;
+	if (!checkImageParameters (inputFiles[0], inputFiles[1], inputFiles[2])) goto fail;
 
+	// <width><height>, printed in hex
+	printf ("%02X%02X\n", inputFiles[0]->width, inputFiles[0]->height);
+
+	// Grid 1: Normal icon
 	if (!convertToPalettedRaster (inputFiles[0])) goto fail;
 
+	printf ("\n");
+
+	// Grid 2: ?
 	if (inputFiles[1] != NULL) {
 		if (!convertToPalettedRaster (inputFiles[1])) goto fail;
 	} else {
 		dummyPalettedRaster (inputFiles[0]);
 	}
 
+	printf ("\n");
+
+	// Grid 3: Alpha mask
 	if (inputFiles[2] != NULL) {
 		if (!convertToAlphaMask (inputFiles[2])) goto fail;
 	} else {
 		dummyAlphaMask (inputFiles[0]);
 	}
-
-/*
-
-	fprintf (stderr, "Reading image width.\n");
-	if (!readUntilNextElement (ppmFile)) goto fail;
-	if (fscanf (ppmFile, "%u", &width) != 1) goto fail;
-	fprintf (stderr, "Width: %u\n", width);
-
-	fprintf (stderr, "Reading image height.\n");
-	if (!readUntilNextElement (ppmFile)) goto fail;
-	if (fscanf (ppmFile, "%u", &height) != 1) goto fail;
-	fprintf (stderr, "Height: %u\n", height);
-
-	fprintf (stderr, "Reading colour depth.\n");
-	if (!readUntilNextElement (ppmFile)) goto fail;
-	if (fscanf (ppmFile, "%u", &depth) != 1) goto fail;
-	fprintf (stderr, "Depth: %u\n", depth);
-	if (depth > 0xFF) {
-		fprintf (stderr, "Error: Not handling bit depth >= 16.\n");
-		goto fail;
-	}
-
-	if (!readUntilNextElement (ppmFile)) goto fail;
-	startPpmPixelData = ftell (ppmFile);
-
-	printf ("%02X%02X\n", width, height);
-
-	// Grid 1: Normal icon
-	for (y = 0; y < height; ++y) {
-		for (x = 0; x < width; ++x) {
-			if (fread (&r, sizeof (uint8_t), 1, ppmFile) != 1) goto fail;
-			if (fread (&g, sizeof (uint8_t), 1, ppmFile) != 1) goto fail;
-			if (fread (&b, sizeof (uint8_t), 1, ppmFile) != 1) goto fail;
-
-			fprintf (stderr,
-				"Original RGB: "
-				"%03u|"
-				"%03u|"
-				"%03u\n",
-				r, g, b
-			);
-
-			paletteEntry = getClosestColourValue (
-				((double)r) / depth,
-				((double)g) / depth,
-				((double)b) / depth
-			);
-			printf ("%02X", paletteEntry);
-		}
-		printf ("\n");
-	}
-
-	printf ("\n");
-
-	// Grid 2: ?
-	fseek (ppmFile, startPpmPixelData, SEEK_SET);
-	for (y = 0; y < height; ++y) {
-		for (x = 0; x < width; ++x) {
-			printf ("%02X", 255);
-		}
-		printf ("\n");
-	}
-
-	printf ("\n");
-
-	// Grid 3: Alpha mask
-	for (y = 0; y < height; ++y) {
-		for (x = 0; x < width; ++x) {
-			printf ("%02X", 255);
-		}
-		printf ("\n");
-	}
-*/
 
 	goto end;
 
