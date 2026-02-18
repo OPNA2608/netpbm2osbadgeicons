@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+    branches: main
+    tags: 'v*'
+  pull_request:
+    branches: main
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 2
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        build-type: [Release, Debug]
+        config:
+          - name: "Windows (MSVC)"
+            os: windows-latest
+            compiler: msvc
+
+          - name: "Windows (MinGW)"
+            os: windows-latest
+            compiler: mingw
+
+          - name: "macOS"
+            os: macos-latest
+
+          - name: "Linux"
+            os: ubuntu-latest
+
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure
+        run: |
+          CONFIGURE_ARGS=(
+            "-DCMAKE_INSTALL_PREFIX:STRING=${PWD}/target"
+            "-DCMAKE_BUILD_TYPE:STRING=${{ matrix.build-type }}"
+          )
+
+          if [ "${{ matrix.config.compiler }}" == "msvc" ]; then
+            CONFIGURE_ARGS+=(
+              -G "Visual Studio 18 2026"
+            )
+          fi
+
+          cmake -B build \
+            "${CONFIGURE_ARGS[@]}"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Install
+        run: cmake --install build
