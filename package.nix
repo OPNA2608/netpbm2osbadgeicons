@@ -43,4 +43,9 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
+
+  # For debugging:
+  # cmakeBuildType = "Debug";
+  # enableParallelChecking = false;
+  # ctestFlags = [ "--verbose" ];
 })
