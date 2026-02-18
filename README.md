@@ -1,6 +1,8 @@
 # netpbm2osbadgeicons
 
-Hey you! Yes, *you*! Do you have an Apple PowerMac G5? Would you like to customise the icons that are displayed when you open the boot manager by holding your Alt / Option key? And are you not afraid of compiling software, using the terminal, and messing with your boot files at your own risk? Then this project might be for you! :)
+Hey you! Yes, *you*! Do you have an Apple PowerMac G5? Would you like to customise the icons that are displayed when you
+open the boot manager by holding your Alt / Option key? And are you not afraid of compiling software, using the
+terminal, and messing with your boot files at your own risk? Then this project might be for you! :)
 
 ## Usage
 
@@ -23,7 +25,7 @@ The resulting data for the `<OS-BADGE-ICONS>` in your `tbxi`-blessed bootinfo fi
 For example:
 
 ```
-$ netpbm2osbadgeicons ./tests/small.pgm 
+$ netpbm2osbadgeicons ./tests/small.pgm
 1010
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 FF00000000FFFFFFFFFFFFFFFFFFFFFF
@@ -76,3 +78,7 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ```
+
+## License
+
+This software is licensed as GPL-3.0-or-later. See `LICENSE.md` for the full text of the GPLv3 license.
