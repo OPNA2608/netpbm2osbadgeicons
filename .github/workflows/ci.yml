@@ -74,7 +74,7 @@ jobs:
             --build-config "${{ matrix.build-type }}"
           )
 
-          ctest build \
+          ctest --test-dir build \
             "${TEST_ARGS[@]}"
 
 
