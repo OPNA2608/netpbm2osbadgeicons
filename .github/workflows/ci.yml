@@ -61,13 +61,17 @@ jobs:
 
       - name: Build
         run: |
+          BUILD_ARGS=(
+            --config "${{ matrix.build-type }}"
+          )
+
           cmake --build build \
             "${BUILD_ARGS[@]}"
 
       - name: Install
         run: |
           INSTALL_ARGS=(
-            "-DCMAKE_BUILD_TYPE:STRING=${{ matrix.build-type }}"
+            --config "${{ matrix.build-type }}"
           )
 
           cmake --install build \
