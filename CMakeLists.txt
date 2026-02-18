@@ -50,6 +50,14 @@ if (NETPBM2OSBADGEICONS_WERROR)
   else()
     list (APPEND PRIVATE_COMPILE_OPTIONS "-Werror")
   endif()
+
+  # unused function parameter in placeholder function
+  if (MSVC)
+    list (APPEND PRIVATE_COMPILE_OPTIONS "/wd4100")
+  else()
+    list (APPEND PRIVATE_COMPILE_OPTIONS "-Wno-error=unused-parameter")
+  endif()
+
 endif()
 
 # TODO: Check if function available even when libm not found / unavailable

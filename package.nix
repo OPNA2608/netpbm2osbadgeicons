@@ -31,4 +31,8 @@ stdenv.mkDerivation (finalAttrs: {
   nativeBuildInputs = [
     cmake
   ];
+
+  cmakeFlags = [
+    (lib.strings.cmakeBool "NETPBM2OSBADGEICONS_WERROR" true)
+  ];
 })

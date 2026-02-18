@@ -35,7 +35,7 @@ jobs:
           - name: "Linux"
             os: ubuntu-latest
 
-    name: ${{ matrix.config.name }}
+    name: "${{ matrix.config.name }} - ${{ matrix.build-type }}"
     runs-on: ${{ matrix.config.os }}
 
     steps:
@@ -47,11 +47,12 @@ jobs:
           CONFIGURE_ARGS=(
             "-DCMAKE_INSTALL_PREFIX:STRING=${PWD}/target"
             "-DCMAKE_BUILD_TYPE:STRING=${{ matrix.build-type }}"
+            "-DNETPBM2OSBADGEICONS_WERROR:BOOL=ON"
           )
 
-          if [ "${{ matrix.config.compiler }}" == "msvc" ]; then
+          if [ "${{ matrix.config.compiler }}" == "mingw" ]; then
             CONFIGURE_ARGS+=(
-              -G "Visual Studio 18 2026"
+              -G "MinGW Makefiles"
             )
           fi
 
@@ -59,7 +60,15 @@ jobs:
             "${CONFIGURE_ARGS[@]}"
 
       - name: Build
-        run: cmake --build build
+        run: |
+          cmake --build build \
+            "${BUILD_ARGS[@]}"
 
       - name: Install
-        run: cmake --install build
+        run: |
+          INSTALL_ARGS=(
+            "-DCMAKE_BUILD_TYPE:STRING=${{ matrix.build-type }}"
+          )
+
+          cmake --install build \
+            "${INSTALL_ARGS[@]}"
