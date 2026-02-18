@@ -27,6 +27,7 @@ set (CMAKE_C_STANDARD 99)
 set (CMAKE_C_EXTENSIONS OFF)
 set (CMAKE_C_STANDARD_REQUIRED ON)
 
+include (CTest)
 include (GNUInstallDirs)
 
 set (PRIVATE_COMPILE_OPTIONS)
@@ -83,3 +84,7 @@ endif()
 install (TARGETS "${PROJECT_NAME}"
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
+
+if (BUILD_TESTING)
+  add_subdirectory (tests)
+endif()

@@ -12,6 +12,7 @@
 #endif
 
 #define ERROR(...) {\
+	fflush (stdout);\
 	fprintf (stderr, __VA_ARGS__);\
 	goto fail;\
 }
@@ -310,6 +311,7 @@ void dummyPalettedRaster (struct netpbmFile* primary) {
 }
 
 bool convertToAlphaMask (struct netpbmFile* file) {
+	fflush (stdout);
 	fprintf (stderr, "PLACEHOLDER: convertToAlphaMask\n");
 	return false;
 }

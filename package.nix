@@ -3,6 +3,7 @@
   stdenv,
   runCommand,
   cmake,
+  ctestCheckHook,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -12,6 +13,7 @@ stdenv.mkDerivation (finalAttrs: {
   src =
     let
       srcs = [
+        "tests"
         "CMakeLists.txt"
         "version"
         "netpbm2osbadgeicons.c"
@@ -32,7 +34,13 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
   ];
 
+  nativeCheckInputs = [
+    ctestCheckHook
+  ];
+
   cmakeFlags = [
     (lib.strings.cmakeBool "NETPBM2OSBADGEICONS_WERROR" true)
   ];
+
+  doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
 })
