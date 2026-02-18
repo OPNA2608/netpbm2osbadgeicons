@@ -371,7 +371,10 @@ int main (int argc, char** argv) {
 	inputFiles[2] = NULL;
 
 	if (argc < 2 || argc > 4) {
-		printf ("Usage: primary.<ppm|pgm> [<secondary.<ppm|pgm>|\"none\">] [<alphamask.pgm|\"none\">]\n");
+		printf (
+			"Usage: %s primary.<ppm|pgm> [<secondary.<ppm|pgm>|\"none\">] [<alphamask.pgm|\"none\">]\n",
+			(argc > 0) ? argv[0] : "netpbm2osbadgeicons"
+		);
 		goto end;
 	}
 
