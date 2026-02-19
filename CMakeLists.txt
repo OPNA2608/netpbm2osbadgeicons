@@ -61,10 +61,16 @@ endif()
 # TODO: Check if function available even when libm not found / unavailable
 find_library (LIBM m) # round()
 
+find_library (NETPBM netpbm REQUIRED)
+
 add_executable ("${PROJECT_NAME}" netpbm2osbadgeicons.c)
 
 target_compile_options ("${PROJECT_NAME}"
   PRIVATE "${PRIVATE_COMPILE_OPTIONS}"
+)
+
+target_link_libraries ("${PROJECT_NAME}"
+  PRIVATE "${NETPBM}"
 )
 
 if (LIBM)
