@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <netpbm/pam.h>
+
 #ifdef NDEBUG
 #	define DEBUG(...) ((void)0)
 #else
@@ -35,6 +37,7 @@
 	goto fail;\
 }
 
+#define PROGNAME "netpbm2osbadgeicons"
 #define RASTER_COUNT 3
 #define DEPTH_LIMIT 0xFF
 
@@ -117,85 +120,64 @@ bool readUntilNextElement (FILE* ppmFile) {
 	}
 }
 
-/* magic number of binary PPM/PGM */
-char* binaryPpmMagic = "P6";
-char* binaryPgmMagic = "P5";
-
-enum netpbmType {
-	PPM,
-	PGM,
-};
-
-struct netpbmFile {
-	FILE* file;
-	enum netpbmType type;
-	unsigned int width;
-	unsigned int height;
-	unsigned int depth;
-};
-
-bool openNetpbmFile (struct netpbmFile** outFile, char* path, bool ppmAllowed) {
+bool openNetpbmFile (struct pam** outPamLocation, char* path, bool colourAllowed) {
 	bool ret = true;
-	struct netpbmFile* tempFile;
-	char buffer[8];
+	FILE* fileHandle = NULL;
+	struct pam* pamHandle = NULL;
 
-	tempFile = malloc (sizeof (struct netpbmFile));
-	if (tempFile == NULL) goto fail;
+	if (*outPamLocation != NULL)
+		ERROR ("Passed return location for Netpbm handle is non-NULL. Forgot to de-init & free?\n");
+
+	pamHandle = malloc (sizeof (struct pam));
+	if (pamHandle == NULL)
+		ERROR ("Failed to allocate memory for PAM struct\n");
 
 	DEBUG ("Opening Netpbm file: %s\n", path);
-	tempFile->file = fopen (path, "rb");
-	if (tempFile->file == NULL)
+	fileHandle = fopen (path, "rb");
+	if (fileHandle == NULL)
 		ERROR ("Failed to open Netpbm file: %s\n", path);
 	DEBUG ("Netpbm file opened: %s\n", path);
 
-	DEBUG (
-		"Checking %s for magic: %s%s%s\n",
-		path,
-		ppmAllowed ? binaryPpmMagic : binaryPgmMagic,
-		ppmAllowed ? " " : "",
-		ppmAllowed ? binaryPgmMagic : ""
-	);
-	if (fread (buffer, sizeof (char), 2, tempFile->file) != 2)
-		ERROR ("Failed to read magic bytes from: %s\n", path);
-	if (ppmAllowed && (memcmp (buffer, binaryPpmMagic, 2) == 0)) {
-		DEBUG ("Identified: binary PPM\n");
-		tempFile->type = PPM;
-	} else if (memcmp (buffer, binaryPgmMagic, 2) == 0) {
-		DEBUG ("Identified: binary PGM\n");
-		tempFile->type = PGM;
-	} else
-		ERROR ("Illegal file magic: %c%c\n", buffer[0], buffer[1]);
+	pamHandle->file = NULL;
+	pamHandle->allocation_depth = 0;
+	pamHandle->comment_p = NULL;
 
-	DEBUG ("Reading image width.\n");
-	if (!readUntilNextElement (tempFile->file)) goto fail;
-	if (fscanf (tempFile->file, "%u", &tempFile->width) != 1)
-		ERROR ("Failed to read image width.\n");
-	DEBUG ("Width: %u\n", tempFile->width);
+	// TODO: This aborts if an error is found. I think that's kinda not nice. Catch signal & handle more gracefully?
+	pnm_readpaminit (fileHandle, pamHandle, PAM_STRUCT_SIZE(tuple_type));
+	DEBUG ("Netpbm file header parsed.\n");
 
-	DEBUG ("Reading image height.\n");
-	if (!readUntilNextElement (tempFile->file)) goto fail;
-	if (fscanf (tempFile->file, "%u", &tempFile->height) != 1)
-		ERROR ("Failed to read image height.\n");
-	DEBUG ("Height: %u\n", tempFile->height);
+	DEBUG ("Width: %u\n", pamHandle->width);
+	DEBUG ("Height: %u\n", pamHandle->height);
+	DEBUG ("Depth: %lu\n", pamHandle->maxval);
 
-	DEBUG ("Reading image depth.\n");
-	if (!readUntilNextElement (tempFile->file)) goto fail;
-	if (fscanf (tempFile->file, "%u", &tempFile->depth) != 1)
-		ERROR ("Failed to read image depth.\n");
-	DEBUG ("Depth: %u\n", tempFile->depth);
+	if (!colourAllowed) {
+		if (!(
+			pamHandle->format == PBM_FORMAT || pamHandle->format == RPBM_FORMAT
+			|| pamHandle->format == PGM_FORMAT || pamHandle->format == RPGM_FORMAT
+		))
+			ERROR ("Netpbm file for this raster must be B/W only (PBM, PGM)\n");
+	}
 
-	*outFile = tempFile;
+	*outPamLocation = pamHandle;
 	goto end;
 
 fail:
 	ret = false;
-	if (tempFile != NULL) {
-		if (tempFile->file != NULL) {
-			fclose (tempFile->file);
-			tempFile->file = NULL;
+
+	if (fileHandle != NULL) {
+		if (pamHandle->file == fileHandle) {
+			pamHandle->file = NULL;
 		}
-		*outFile = NULL;
-		free (tempFile);
+		fclose (fileHandle);
+		fileHandle = NULL;
+	}
+
+	if (pamHandle != NULL) {
+		if (*outPamLocation == pamHandle) {
+			*outPamLocation = NULL;
+		}
+		free (pamHandle);
+		pamHandle = NULL;
 	}
 
 end:
@@ -203,9 +185,9 @@ end:
 }
 
 bool checkImageParameters (
-	struct netpbmFile* primaryFile,
-	struct netpbmFile* secondaryFile,
-	struct netpbmFile* alphaFile
+	struct pam* primaryFile,
+	struct pam* secondaryFile,
+	struct pam* alphaFile
 ) {
 	bool ret = true;
 
@@ -215,10 +197,10 @@ bool checkImageParameters (
 	if (primaryFile->height > 52)
 		ERROR ("Primary image has invalid height (>52): %u\n", primaryFile->height);
 
-	if (primaryFile->depth > DEPTH_LIMIT)
+	if (primaryFile->maxval > DEPTH_LIMIT)
 		ERROR (
-			"TODO: Primary image's depth (%u) larger than what we can currently handle (%u)\n",
-			primaryFile->depth,
+			"TODO: Primary image's depth (%lu) larger than what we can currently handle (%u)\n",
+			primaryFile->maxval,
 			DEPTH_LIMIT
 		);
 
@@ -237,10 +219,10 @@ bool checkImageParameters (
 				primaryFile->height
 			);
 
-		if (secondaryFile->depth > 0xFF)
+		if (secondaryFile->maxval > 0xFF)
 			ERROR (
-				"TODO: Secondary image's depth (%u) larger than what we can currently handle (%u)\n",
-				secondaryFile->depth,
+				"TODO: Secondary image's depth (%lu) larger than what we can currently handle (%u)\n",
+				secondaryFile->maxval,
 				DEPTH_LIMIT
 			);
 	}
@@ -260,14 +242,15 @@ bool checkImageParameters (
 				primaryFile->height
 			);
 
-		if (alphaFile->depth > 0xFF)
+		if (alphaFile->maxval > 0xFF)
 			ERROR (
-				"TODO: Alpha mask's depth (%u) larger than what we can currently handle (%u)\n",
-				secondaryFile->depth,
+				"TODO: Alpha mask's depth (%lu) larger than what we can currently handle (%u)\n",
+				secondaryFile->maxval,
 				DEPTH_LIMIT
 			);
 	}
 
+	DEBUG ("Checked headers of Netpbm files.\n");
 	goto end;
 
 fail:
@@ -277,9 +260,9 @@ end:
 	return ret;
 }
 
-bool convertToPalettedRaster (struct netpbmFile* file) {
+bool convertToPalettedRaster (struct pam* file) {
 	bool ret = true;
-	unsigned int x, y;
+	int x, y;
 	uint8_t r, g, b, paletteEntry;
 
 	if (!readUntilNextElement (file->file)) goto fail;
@@ -288,13 +271,13 @@ bool convertToPalettedRaster (struct netpbmFile* file) {
 		for (x = 0; x < file->width; ++x) {
 			if (fread (&r, sizeof (uint8_t), 1, file->file) != 1) goto fail;
 
-			if (file->type == PPM) {
+			if (file->format == RPPM_FORMAT) {
 				if (fread (&g, sizeof (uint8_t), 1, file->file) != 1) goto fail;
 			} else {
 				g = r;
 			}
 
-			if (file->type == PPM) {
+			if (file->format == RPPM_FORMAT) {
 				if (fread (&b, sizeof (uint8_t), 1, file->file) != 1) goto fail;
 			} else {
 				b = r;
@@ -309,9 +292,9 @@ bool convertToPalettedRaster (struct netpbmFile* file) {
 			);
 
 			paletteEntry = getClosestColourValue (
-				((double)r) / file->depth,
-				((double)g) / file->depth,
-				((double)b) / file->depth
+				((double)r) / file->maxval,
+				((double)g) / file->maxval,
+				((double)b) / file->maxval
 			);
 			printf ("%02X", paletteEntry);
 		}
@@ -327,8 +310,8 @@ end:
 	return ret;
 }
 
-void dummyPalettedRaster (struct netpbmFile* primary) {
-	unsigned int x, y;
+void dummyPalettedRaster (struct pam* primary) {
+	int x, y;
 
 	for (y = 0; y < primary->height; ++y) {
 		for (x = 0; x < primary->width; ++x) {
@@ -338,9 +321,9 @@ void dummyPalettedRaster (struct netpbmFile* primary) {
 	}
 }
 
-bool convertToAlphaMask (struct netpbmFile* file) {
+bool convertToAlphaMask (struct pam* file) {
 	bool ret = true;
-	unsigned int x, y;
+	int x, y;
 	uint8_t a;
 
 	if (!readUntilNextElement (file->file)) goto fail;
@@ -369,8 +352,8 @@ end:
 	return ret;
 }
 
-void dummyAlphaMask (struct netpbmFile* primary) {
-	unsigned int x, y;
+void dummyAlphaMask (struct pam* primary) {
+	int x, y;
 
 	for (y = 0; y < primary->height; ++y) {
 		for (x = 0; x < primary->width; ++x) {
@@ -382,19 +365,21 @@ void dummyAlphaMask (struct netpbmFile* primary) {
 
 int main (int argc, char** argv) {
 	int ret = 0;
-	struct netpbmFile* inputFiles[RASTER_COUNT];
+	unsigned int i;
+	struct pam* inputFiles[RASTER_COUNT];
 
-	inputFiles[0] = NULL;
-	inputFiles[1] = NULL;
-	inputFiles[2] = NULL;
+	for (i = 0; i < RASTER_COUNT; ++i)
+		inputFiles[i] = NULL;
 
 	if (argc < 2 || argc > 4) {
 		printf (
 			"Usage: %s primary.<ppm|pgm> [<secondary.<ppm|pgm>|\"none\">] [<alphamask.pgm|\"none\">]\n",
-			(argc > 0) ? argv[0] : "netpbm2osbadgeicons"
+			(argc > 0) ? argv[0] : PROGNAME
 		);
 		goto end;
 	}
+
+	pm_init ((argc > 0) ? argv[0] : PROGNAME, 0);
 
 	if (!openNetpbmFile (&inputFiles[0], argv[1], true)) goto fail;
 

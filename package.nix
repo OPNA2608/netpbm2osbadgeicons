@@ -4,6 +4,7 @@
   runCommand,
   cmake,
   ctestCheckHook,
+  netpbm,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -32,6 +33,10 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [
     cmake
+  ];
+
+  buildInputs = [
+    netpbm
   ];
 
   nativeCheckInputs = [
