@@ -5,6 +5,7 @@
   cmake,
   ctestCheckHook,
   netpbm,
+  valgrind,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -41,10 +42,12 @@ stdenv.mkDerivation (finalAttrs: {
 
   nativeCheckInputs = [
     ctestCheckHook
+    valgrind
   ];
 
   cmakeFlags = [
     (lib.strings.cmakeBool "NETPBM2OSBADGEICONS_WERROR" true)
+    (lib.strings.cmakeBool "NETPBM2OSBADGEICONS_TEST_VALGRIND" true)
   ];
 
   doCheck = stdenv.buildPlatform.canExecute stdenv.hostPlatform;
