@@ -21,13 +21,14 @@ jobs:
       matrix:
         build-type: [Release, Debug]
         config:
-          - name: "Windows (MSVC)"
-            os: windows-latest
-            compiler: msvc
+          # netpbm isn't available anywhere on Windows, needs POSIX headers
+          #- name: "Windows (MSVC)"
+          #  os: windows-latest
+          #  compiler: msvc
 
-          - name: "Windows (MinGW)"
-            os: windows-latest
-            compiler: mingw
+          #- name: "Windows (MinGW)"
+          #  os: windows-latest
+          #  compiler: mingw
 
           - name: "macOS"
             os: macos-latest
