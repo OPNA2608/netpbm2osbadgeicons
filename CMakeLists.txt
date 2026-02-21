@@ -94,5 +94,23 @@ install (TARGETS "${PROJECT_NAME}"
 )
 
 if (BUILD_TESTING)
+  set (NETPBM2OSBADGEICONS_TEST_VALGRIND_DEFAULT OFF)
+  if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set (NETPBM2OSBADGEICONS_TEST_VALGRIND_DEFAULT ON)
+  endif()
+  option (
+    NETPBM2OSBADGEICONS_TEST_VALGRIND
+    "Verify with Valgrind that code is leak-free"
+    ${NETPBM2OSBADGEICONS_TEST_VALGRIND_DEFAULT}
+  )
+
+  if (NETPBM2OSBADGEICONS_TEST_VALGRIND)
+    find_program (VALGRIND_BIN valgrind)
+    # find_program ([...] REQUIRED) is 3.18
+    if (NOT VALGRIND_BIN)
+      message (FATAL_ERROR "NETPBM2OSBADGEICONS_TEST_VALGRIND specified, but no valgrind found!")
+    endif()
+  endif()
+
   add_subdirectory (tests)
 endif()

@@ -1,3 +1,7 @@
+if (NETPBM2OSBADGEICONS_TEST_VALGRIND)
+  add_executable (valgrind-checker valgrind-checker.c)
+endif()
+
 file (GLOB TESTDIRS_RAW "*")
 set (TESTDIRS)
 
@@ -37,12 +41,29 @@ foreach (TESTDIR_FULL IN LISTS TESTDIRS)
   endif()
 
   add_test (NAME "${TESTDIR}"
-    COMMAND "${PROJECT_NAME}" ${TESTARGS}
+    COMMAND "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
   )
   if (TEST_TYPE STREQUAL "failure")
     set_property (TEST "${TESTDIR}"
       PROPERTY WILL_FAIL TRUE
+    )
+  endif()
+
+  if (
+    NETPBM2OSBADGEICONS_TEST_VALGRIND
+    # when netpbm code fails, it aborts the process - can't be nice and ensure no leaks
+    AND TEST_TYPE STREQUAL "success"
+  )
+    add_test (NAME "valgrind-${TESTDIR}"
+      COMMAND
+        "$<TARGET_FILE:valgrind-checker>"
+        ${VALGRIND_BIN}
+          --show-error-list=yes
+          --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all
+          --error-exitcode=205
+        "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     )
   endif()
 endforeach()
