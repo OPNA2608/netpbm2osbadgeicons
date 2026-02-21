@@ -48,6 +48,57 @@
 #define RASTER_COUNT 3
 #define DEPTH_LIMIT 0xFF
 
+struct intensityTuple {
+	double r;
+	double g;
+	double b;
+};
+
+struct colorTuple {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+};
+
+double distanceFromOriginalColour (
+	struct colorTuple calculatedColour,
+	unsigned int newIntensityMax,
+	struct intensityTuple originalIntensities
+) {
+	return
+		fabs (((double)calculatedColour.r / newIntensityMax) - originalIntensities.r)
+		+ fabs (((double)calculatedColour.g / newIntensityMax) - originalIntensities.g)
+		+ fabs (((double)calculatedColour.b / newIntensityMax) - originalIntensities.b);
+}
+
+enum paletteOption {
+	LOW_PRECISION_RGB,
+	HIGH_PRECISION_R,
+	HIGH_PRECISION_G,
+	HIGH_PRECISION_B,
+	HIGH_PRECISION_BW_R,
+	HIGH_PRECISION_BW_G,
+	HIGH_PRECISION_BW_B,
+	END_OF_OPTIONS,
+};
+
+enum paletteOption findPaletteOptionWithLeastDiff (
+	double options[END_OF_OPTIONS]
+) {
+	enum paletteOption lowestOption = END_OF_OPTIONS;
+	double lowestDiff = 100.;
+	unsigned int i;
+
+	for (i = LOW_PRECISION_RGB; i < END_OF_OPTIONS; ++i) {
+		if (options[i] < lowestDiff) {
+			lowestOption = i;
+			lowestDiff = options[i];
+		}
+	}
+
+	return lowestOption;
+}
+
 /*
 	palette consists of:
 
@@ -62,38 +113,208 @@
 
 	TODO: Check if colour may be closer to a high-precision R/G/B/BW entry
 */
-uint8_t getClosestColourValue (double rIntensity, double gIntensity, double bIntensity) {
-	uint8_t r = (uint8_t) (round (5 * rIntensity));
-	uint8_t g = (uint8_t) (round (5 * gIntensity));
-	uint8_t b = (uint8_t) (round (5 * bIntensity));
+uint8_t getClosestColourValue (struct intensityTuple intensities) {
+	struct colorTuple lowPrecisionRGB = {
+		.r = (uint8_t) (round ((6 - 1) * intensities.r)),
+		.g = (uint8_t) (round ((6 - 1) * intensities.g)),
+		.b = (uint8_t) (round ((6 - 1) * intensities.b)),
+	};
+
+	struct colorTuple highPrecisionR = {
+		.r = (uint8_t) (round ((10 - 1) * intensities.r)),
+		.g = 0,
+		.b = 0,
+	};
+
+	struct colorTuple highPrecisionG = {
+		.r = 0,
+		.g = (uint8_t) (round ((10 - 1) * intensities.g)),
+		.b = 0,
+	};
+
+	struct colorTuple highPrecisionB = {
+		.r = 0,
+		.g = 0,
+		.b = (uint8_t) (round ((10 - 1) * intensities.b)),
+	};
+
+	struct colorTuple highPrecisionR_BW = {
+		.r = highPrecisionR.r,
+		.g = highPrecisionR.r,
+		.b = highPrecisionR.r,
+	};
+
+	struct colorTuple highPrecisionG_BW = {
+		.r = highPrecisionG.g,
+		.g = highPrecisionG.g,
+		.b = highPrecisionG.g,
+	};
+
+	struct colorTuple highPrecisionB_BW = {
+		.r = highPrecisionB.b,
+		.g = highPrecisionB.b,
+		.b = highPrecisionB.b,
+	};
+
+	double lowPrecisionRGBDiff = distanceFromOriginalColour (lowPrecisionRGB, 6 - 1, intensities);
+	double highPrecisionRDiff = distanceFromOriginalColour (highPrecisionR, 10 - 1, intensities);
+	double highPrecisionGDiff = distanceFromOriginalColour (highPrecisionG, 10 - 1, intensities);
+	double highPrecisionBDiff = distanceFromOriginalColour (highPrecisionB, 10 - 1, intensities);
+	double highPrecisionR_BWDiff = distanceFromOriginalColour (highPrecisionR_BW, 10 - 1, intensities);
+	double highPrecisionG_BWDiff = distanceFromOriginalColour (highPrecisionG_BW, 10 - 1, intensities);
+	double highPrecisionB_BWDiff = distanceFromOriginalColour (highPrecisionB_BW, 10 - 1, intensities);
+
+	double paletteOptionDiffs[] = {
+		lowPrecisionRGBDiff,
+		highPrecisionRDiff,
+		highPrecisionGDiff,
+		highPrecisionBDiff,
+		highPrecisionR_BWDiff,
+		highPrecisionG_BWDiff,
+		highPrecisionB_BWDiff,
+	};
+
+	uint8_t paletteEntry;
 
 	DEBUG (
-		"Intensity: "
+		"Input intensities: "
 		"%lf|"
 		"%lf|"
 		"%lf",
-		rIntensity, gIntensity, bIntensity
-	);
-	DEBUG (
-		"Newval: "
-		"%u|"
-		"%u|"
-		"%u",
-		r, g, b
+		intensities.r, intensities.g, intensities.b
 	);
 
-	if ((r + g + b) == 0) {
-		// entry stolen by high-precision R palette, point at other index instead
-		return 0xFF;
-	} else {
-		return
-			((6 * 6 * 6) - 1) // lowest-intensity value (except see above)
-			- (
-				b
-				+ (g * 6)
-				+ (r * 6 * 6)
-			);
+	DEBUG (
+		"Low-precision values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		lowPrecisionRGB.r, lowPrecisionRGB.g, lowPrecisionRGB.b, lowPrecisionRGBDiff
+	);
+
+	DEBUG (
+		"High-precision R values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionR.r, highPrecisionR.g, highPrecisionR.b, highPrecisionRDiff
+	);
+
+	DEBUG (
+		"High-precision G values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionG.r, highPrecisionG.g, highPrecisionG.b, highPrecisionGDiff
+	);
+
+	DEBUG (
+		"High-precision B values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionB.r, highPrecisionB.g, highPrecisionB.b, highPrecisionBDiff
+	);
+
+	DEBUG (
+		"High-precision BW (R) values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionR_BW.r, highPrecisionR_BW.g, highPrecisionR_BW.b, highPrecisionR_BWDiff
+	);
+
+	DEBUG (
+		"High-precision BW (G) values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionG_BW.r, highPrecisionG_BW.g, highPrecisionG_BW.b, highPrecisionG_BWDiff
+	);
+
+	DEBUG (
+		"High-precision BW (B) values: "
+		"%u|"
+		"%u|"
+		"%u"
+		" (dist %lf)",
+		highPrecisionB_BW.r, highPrecisionB_BW.g, highPrecisionB_BW.b, highPrecisionB_BWDiff
+	);
+
+	switch (findPaletteOptionWithLeastDiff (paletteOptionDiffs)) {
+		case LOW_PRECISION_RGB:
+			DEBUG ("Choosing low-precision RGB");
+			if ((lowPrecisionRGB.r + lowPrecisionRGB.g + lowPrecisionRGB.b) == 0) {
+				// entry stolen by high-precision R palette, point at other index instead
+				paletteEntry = 0xFF;
+			} else {
+				paletteEntry =
+					((6 * 6 * 6) - 1) // lowest-intensity value (except see above)
+					- (
+						lowPrecisionRGB.b
+						+ (lowPrecisionRGB.g * 6)
+						+ (lowPrecisionRGB.r * 6 * 6)
+					);
+			}
+			break;
+
+		case HIGH_PRECISION_R:
+			DEBUG ("Choosing high-precision R");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (1 * 10))
+				- highPrecisionR.r;
+			break;
+
+		case HIGH_PRECISION_G:
+			DEBUG ("Choosing high-precision G");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (2 * 10))
+				- highPrecisionG.g;
+			break;
+
+		case HIGH_PRECISION_B:
+			DEBUG ("Choosing high-precision B");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (3 * 10))
+				- highPrecisionB.b;
+			break;
+
+		case HIGH_PRECISION_BW_R:
+			DEBUG ("Choosing high-precision BW (based on R value)");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (4 * 10))
+				- highPrecisionR_BW.r;
+			break;
+
+		case HIGH_PRECISION_BW_G:
+			DEBUG ("Choosing high-precision BW (based on G value)");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (4 * 10))
+				- highPrecisionG_BW.g;
+			break;
+
+		case HIGH_PRECISION_BW_B:
+			DEBUG ("Choosing high-precision BW (based on B value)");
+			paletteEntry =
+				(((6 * 6 * 6) - 1) + (4 * 10))
+				- highPrecisionB_BW.b;
+			break;
+
+		case END_OF_OPTIONS:
+		default:
+			// TODO: Prolly error out?
+			fprintf (stderr, "??????");
+			paletteEntry = 0xFF;
+			break;
 	}
+
+	return paletteEntry;
 }
 
 bool openNetpbmFile (struct pam** outPamLocation, char* path) {
@@ -278,11 +499,11 @@ bool convertToPalettedRaster (struct pam* file) {
 				r, g, b
 			);
 
-			paletteEntry = getClosestColourValue (
-				((double)r) / file->maxval,
-				((double)g) / file->maxval,
-				((double)b) / file->maxval
-			);
+			paletteEntry = getClosestColourValue ((struct intensityTuple) {
+				.r = ((double)r) / file->maxval,
+				.g = ((double)g) / file->maxval,
+				.b = ((double)b) / file->maxval,
+			});
 			printf ("%02X", paletteEntry);
 		}
 		printf ("\n");
