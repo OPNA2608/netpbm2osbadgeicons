@@ -54,7 +54,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt update
-          sudo apt install libnetpbm-dev
+          sudo apt install libnetpbm-dev valgrind
 
       - name: Configure
         run: |
@@ -63,6 +63,12 @@ jobs:
             "-DCMAKE_BUILD_TYPE:STRING=${{ matrix.build-type }}"
             "-DNETPBM2OSBADGEICONS_WERROR:BOOL=ON"
           )
+
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            CONFIGURE_ARGS+=(
+              "-DNETPBM2OSBADGEICONS_TEST_VALGRIND:BOOL=ON"
+            )
+          fi
 
           if [ "${{ matrix.config.compiler }}" == "mingw" ]; then
             CONFIGURE_ARGS+=(
