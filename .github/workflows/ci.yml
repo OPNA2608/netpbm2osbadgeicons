@@ -88,6 +88,12 @@ jobs:
             --build-config "${{ matrix.build-type }}"
           )
 
+          if [ "${{ matrix.build-type }}" == "Debug" ]; then
+            TEST_ARGS+=(
+              --verbose
+            )
+          fi
+
           ctest --test-dir build \
             "${TEST_ARGS[@]}"
 
