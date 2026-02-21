@@ -61,7 +61,13 @@ endif()
 # TODO: Check if function available even when libm not found / unavailable
 find_library (LIBM m) # round()
 
-find_library (NETPBM netpbm REQUIRED)
+find_path (NETPBM_INCLUDE_DIR netpbm/pam.h)
+message (STATUS "netpbm include dir: ${NETPBM_INCLUDE_DIR}")
+find_library (NETPBM_LIB netpbm)
+message (STATUS "netpbm library: ${NETPBM_LIB}")
+if (NOT NETPBM_INCLUDE_DIR OR NOT NETPBM_LIB)
+  message (FATAL_ERROR "Failed to determine NETPBM_INCLUDE_DIR or NETPBM_LIB")
+endif()
 
 add_executable ("${PROJECT_NAME}" netpbm2osbadgeicons.c)
 
@@ -69,8 +75,12 @@ target_compile_options ("${PROJECT_NAME}"
   PRIVATE "${PRIVATE_COMPILE_OPTIONS}"
 )
 
+target_include_directories ("${PROJECT_NAME}"
+  PRIVATE "${NETPBM_INCLUDE_DIR}"
+)
+
 target_link_libraries ("${PROJECT_NAME}"
-  PRIVATE "${NETPBM}"
+  PRIVATE "${NETPBM_LIB}"
 )
 
 if (LIBM)
