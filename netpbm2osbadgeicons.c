@@ -89,38 +89,7 @@ uint8_t getClosestColourValue (double rIntensity, double gIntensity, double bInt
 	}
 }
 
-bool readUntilNextElement (FILE* ppmFile) {
-	char buffer = '\0';
-	bool inComment = false;
-
-	while (true) {
-		if (fread (&buffer, sizeof (char), 1, ppmFile) != 1) return false;
-		switch (buffer) {
-			case ' ':
-			case '\t':
-				break;
-
-			case '\r':
-			case '\n':
-				if (inComment) {
-					inComment = false;
-				}
-				break;
-
-			case '#':
-				inComment = true;
-				break;
-
-			default:
-				if (!inComment) {
-					fseek (ppmFile, -1, SEEK_CUR);
-					return true;
-				}
-		}
-	}
-}
-
-bool openNetpbmFile (struct pam** outPamLocation, char* path, bool colourAllowed) {
+bool openNetpbmFile (struct pam** outPamLocation, char* path) {
 	bool ret = true;
 	FILE* fileHandle = NULL;
 	struct pam* pamHandle = NULL;
@@ -149,14 +118,6 @@ bool openNetpbmFile (struct pam** outPamLocation, char* path, bool colourAllowed
 	DEBUG ("Width: %u\n", pamHandle->width);
 	DEBUG ("Height: %u\n", pamHandle->height);
 	DEBUG ("Depth: %lu\n", pamHandle->maxval);
-
-	if (!colourAllowed) {
-		if (!(
-			pamHandle->format == PBM_FORMAT || pamHandle->format == RPBM_FORMAT
-			|| pamHandle->format == PGM_FORMAT || pamHandle->format == RPGM_FORMAT
-		))
-			ERROR ("Netpbm file for this raster must be B/W only (PBM, PGM)\n");
-	}
 
 	*outPamLocation = pamHandle;
 	goto end;
@@ -248,6 +209,12 @@ bool checkImageParameters (
 				secondaryFile->maxval,
 				DEPTH_LIMIT
 			);
+
+		if (!(
+			alphaFile->format == PBM_FORMAT || alphaFile->format == RPBM_FORMAT
+			|| alphaFile ->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT
+		))
+			ERROR ("Netpbm file for the alpha mask must be B/W only (PBM, PGM)\n");
 	}
 
 	DEBUG ("Checked headers of Netpbm files.\n");
@@ -262,25 +229,35 @@ end:
 
 bool convertToPalettedRaster (struct pam* file) {
 	bool ret = true;
+	tuple* currentInputRow = NULL;
 	int x, y;
 	uint8_t r, g, b, paletteEntry;
 
-	if (!readUntilNextElement (file->file)) goto fail;
+	// TODO: This allocates, so I assume it can fail. Does it abort, or return NULL?
+	currentInputRow = pnm_allocpamrow (file);
 
 	for (y = 0; y < file->height; ++y) {
+		// TODO: This aborts if an error is found. I think that's kinda not nice. Catch signal & handle more gracefully?
+		pnm_readpamrow (file, currentInputRow);
+
 		for (x = 0; x < file->width; ++x) {
-			if (fread (&r, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			switch (file->depth) {
+				case 1:
+					// only BW
+					r = currentInputRow[x][0];
+					g = currentInputRow[x][0];
+					b = currentInputRow[x][0];
+					break;
 
-			if (file->format == RPPM_FORMAT) {
-				if (fread (&g, sizeof (uint8_t), 1, file->file) != 1) goto fail;
-			} else {
-				g = r;
-			}
+				case 3:
+					// RGB
+					r = currentInputRow[x][0];
+					g = currentInputRow[x][1];
+					b = currentInputRow[x][2];
+					break;
 
-			if (file->format == RPPM_FORMAT) {
-				if (fread (&b, sizeof (uint8_t), 1, file->file) != 1) goto fail;
-			} else {
-				b = r;
+				default:
+					ERROR ("Don't know convert this amount of planes: %i\n", file->depth);
 			}
 
 			DEBUG (
@@ -307,10 +284,12 @@ fail:
 	ret = false;
 
 end:
+	pnm_freepamrow (currentInputRow);
+
 	return ret;
 }
 
-void dummyPalettedRaster (struct pam* primary) {
+void generateBlankPalettedRaster (struct pam* primary) {
 	int x, y;
 
 	for (y = 0; y < primary->height; ++y) {
@@ -322,15 +301,19 @@ void dummyPalettedRaster (struct pam* primary) {
 }
 
 bool convertToAlphaMask (struct pam* file) {
-	bool ret = true;
+	tuple* currentInputRow = NULL;
 	int x, y;
 	uint8_t a;
 
-	if (!readUntilNextElement (file->file)) goto fail;
+	// TODO: This allocates, so I assume it can fail. Does it abort, or return NULL?
+	currentInputRow = pnm_allocpamrow (file);
 
 	for (y = 0; y < file->height; ++y) {
+		// TODO: This aborts if an error is found. I think that's kinda not nice. Catch signal & handle more gracefully?
+		pnm_readpamrow (file, currentInputRow);
+
 		for (x = 0; x < file->width; ++x) {
-			if (fread (&a, sizeof (uint8_t), 1, file->file) != 1) goto fail;
+			a = currentInputRow[x][0];
 
 			DEBUG (
 				"Original alpha: "
@@ -343,16 +326,12 @@ bool convertToAlphaMask (struct pam* file) {
 		printf ("\n");
 	}
 
-	goto end;
+	pnm_freepamrow (currentInputRow);
 
-fail:
-	ret = false;
-
-end:
-	return ret;
+	return true;
 }
 
-void dummyAlphaMask (struct pam* primary) {
+void generateBlankAlphaMask (struct pam* primary) {
 	int x, y;
 
 	for (y = 0; y < primary->height; ++y) {
@@ -381,18 +360,18 @@ int main (int argc, char** argv) {
 
 	pm_init ((argc > 0) ? argv[0] : PROGNAME, 0);
 
-	if (!openNetpbmFile (&inputFiles[0], argv[1], true)) goto fail;
+	if (!openNetpbmFile (&inputFiles[0], argv[1])) goto fail;
 
 	if (
 		(argc > 2)
 		&& (strcmp (argv[2], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[1], argv[2], true)
+		&& !openNetpbmFile (&inputFiles[1], argv[2])
 	) goto fail;
 
 	if (
 		(argc > 3)
 		&& (strcmp (argv[3], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[2], argv[3], false)
+		&& !openNetpbmFile (&inputFiles[2], argv[3])
 	) goto fail;
 
 	if (!checkImageParameters (inputFiles[0], inputFiles[1], inputFiles[2])) goto fail;
@@ -409,7 +388,7 @@ int main (int argc, char** argv) {
 	if (inputFiles[1] != NULL) {
 		if (!convertToPalettedRaster (inputFiles[1])) goto fail;
 	} else {
-		dummyPalettedRaster (inputFiles[0]);
+		generateBlankPalettedRaster (inputFiles[0]);
 	}
 
 	printf ("\n");
@@ -418,7 +397,7 @@ int main (int argc, char** argv) {
 	if (inputFiles[2] != NULL) {
 		if (!convertToAlphaMask (inputFiles[2])) goto fail;
 	} else {
-		dummyAlphaMask (inputFiles[0]);
+		generateBlankAlphaMask (inputFiles[0]);
 	}
 
 	goto end;
@@ -434,6 +413,7 @@ end:
 				fclose (inputFiles[i]->file);
 				inputFiles[i]->file = NULL;
 			}
+			free (inputFiles[i]);
 			inputFiles[i] = NULL;
 		}
 	}
