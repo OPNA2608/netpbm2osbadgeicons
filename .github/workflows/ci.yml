@@ -27,8 +27,12 @@ jobs:
         uses: actions/checkout@v6
 
       - name: pre-commit run --all-files
+        id: run-formatters
         run: |
-          nix-shell --run 'pre-commit run --all-files'
+          if ! nix-shell --run 'pre-commit run --all-files'; then
+            git diff
+            exit 1
+          fi
 
   build:
     strategy:
