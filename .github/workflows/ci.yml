@@ -15,6 +15,21 @@ env:
   CMAKE_BUILD_PARALLEL_LEVEL: 2
 
 jobs:
+  run-precommit:
+    name: "pre-commit run --all-files"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31.9.1
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: pre-commit run --all-files
+        run: |
+          nix-shell --run 'pre-commit run --all-files'
+
   build:
     strategy:
       fail-fast: false
