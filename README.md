@@ -79,6 +79,12 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ```
 
+## Notes
+
+- Greyscale rasters may be used for the alpha mask, but might not be fully respected by your hardware.
+  On my G5, 0 is fully transparent, anything >0 is fully visible.
+  If you run into hardware that does support partial transparency in the boot manager, please let me know!
+
 ## Rules/ideas you must abide by when contributing
 
 - Trans rights.
