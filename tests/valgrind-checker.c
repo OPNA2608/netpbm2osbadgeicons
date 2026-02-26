@@ -1,8 +1,8 @@
 #define _XOPEN_SOURCE 700
 #include <stdio.h>
-#include <unistd.h>
 
 #include <sys/wait.h>
+#include <unistd.h>
 
 #define VALGRIND_ERROR_STATUS 205
 
@@ -31,10 +31,7 @@ int main (int argc, char** argv) {
 			printf ("Valgrind exited with status %i\n", childExitStatus);
 		}
 
-		return
-			(childExitStatus != VALGRIND_ERROR_STATUS)
-			? 0
-			: 3;
+		return (childExitStatus != VALGRIND_ERROR_STATUS) ? 0 : 3;
 	} else {
 		// Failed to work
 		fprintf (stderr, "Failed to fork!\n");
