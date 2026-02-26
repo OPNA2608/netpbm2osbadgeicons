@@ -16,48 +16,50 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include <math.h>
 #include <netpbm/pam.h>
 
-#define _LOG(...) { \
-	fflush (stdout); \
-	fprintf (stderr, __VA_ARGS__); \
-	fprintf (stderr, "\n"); \
-}
+#define _LOG(...) \
+	{ \
+		fflush (stdout); \
+		fprintf (stderr, __VA_ARGS__); \
+		fprintf (stderr, "\n"); \
+	}
 
 #ifdef NDEBUG
-#	define DEBUG(...) ((void)0)
+#	define DEBUG(...) ((void) 0)
 #else
 #	define DEBUG(...) _LOG ("DEBUG: " __VA_ARGS__);
 #endif
 
 #define WARN(...) _LOG ("WARNING: " __VA_ARGS__);
 
-#define ERROR(...) {\
-	_LOG ("ERROR: " __VA_ARGS__); \
-	goto fail;\
-}
+#define ERROR(...) \
+	{ \
+		_LOG ("ERROR: " __VA_ARGS__); \
+		goto fail; \
+	}
 
 #define PROGNAME "netpbm2osbadgeicons"
 #define RASTER_COUNT 3
 #define DEPTH_LIMIT 0xFF
 
 struct intensityTuple {
-	double r;
-	double g;
-	double b;
+		double r;
+		double g;
+		double b;
 };
 
 struct colorTuple {
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
+		uint8_t r;
+		uint8_t g;
+		uint8_t b;
 };
 
 double distanceFromOriginalColour (
@@ -65,10 +67,9 @@ double distanceFromOriginalColour (
 	unsigned int newIntensityMax,
 	struct intensityTuple originalIntensities
 ) {
-	return
-		fabs (((double)calculatedColour.r / newIntensityMax) - originalIntensities.r)
-		+ fabs (((double)calculatedColour.g / newIntensityMax) - originalIntensities.g)
-		+ fabs (((double)calculatedColour.b / newIntensityMax) - originalIntensities.b);
+	return fabs (((double) calculatedColour.r / newIntensityMax) - originalIntensities.r)
+		+ fabs (((double) calculatedColour.g / newIntensityMax) - originalIntensities.g)
+		+ fabs (((double) calculatedColour.b / newIntensityMax) - originalIntensities.b);
 }
 
 enum paletteOption {
@@ -79,12 +80,10 @@ enum paletteOption {
 	HIGH_PRECISION_BW_R,
 	HIGH_PRECISION_BW_G,
 	HIGH_PRECISION_BW_B,
-	END_OF_OPTIONS,
+	END_OF_OPTIONS
 };
 
-enum paletteOption findPaletteOptionWithLeastDiff (
-	double options[END_OF_OPTIONS]
-) {
+enum paletteOption findPaletteOptionWithLeastDiff (double options[END_OF_OPTIONS]) {
 	enum paletteOption lowestOption = END_OF_OPTIONS;
 	double lowestDiff = 100.;
 	unsigned int i;
@@ -181,7 +180,9 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%lf|"
 		"%lf|"
 		"%lf",
-		intensities.r, intensities.g, intensities.b
+		intensities.r,
+		intensities.g,
+		intensities.b
 	);
 
 	DEBUG (
@@ -190,7 +191,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		lowPrecisionRGB.r, lowPrecisionRGB.g, lowPrecisionRGB.b, lowPrecisionRGBDiff
+		lowPrecisionRGB.r,
+		lowPrecisionRGB.g,
+		lowPrecisionRGB.b,
+		lowPrecisionRGBDiff
 	);
 
 	DEBUG (
@@ -199,7 +203,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionR.r, highPrecisionR.g, highPrecisionR.b, highPrecisionRDiff
+		highPrecisionR.r,
+		highPrecisionR.g,
+		highPrecisionR.b,
+		highPrecisionRDiff
 	);
 
 	DEBUG (
@@ -208,7 +215,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionG.r, highPrecisionG.g, highPrecisionG.b, highPrecisionGDiff
+		highPrecisionG.r,
+		highPrecisionG.g,
+		highPrecisionG.b,
+		highPrecisionGDiff
 	);
 
 	DEBUG (
@@ -217,7 +227,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionB.r, highPrecisionB.g, highPrecisionB.b, highPrecisionBDiff
+		highPrecisionB.r,
+		highPrecisionB.g,
+		highPrecisionB.b,
+		highPrecisionBDiff
 	);
 
 	DEBUG (
@@ -226,7 +239,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionR_BW.r, highPrecisionR_BW.g, highPrecisionR_BW.b, highPrecisionR_BWDiff
+		highPrecisionR_BW.r,
+		highPrecisionR_BW.g,
+		highPrecisionR_BW.b,
+		highPrecisionR_BWDiff
 	);
 
 	DEBUG (
@@ -235,7 +251,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionG_BW.r, highPrecisionG_BW.g, highPrecisionG_BW.b, highPrecisionG_BWDiff
+		highPrecisionG_BW.r,
+		highPrecisionG_BW.g,
+		highPrecisionG_BW.b,
+		highPrecisionG_BWDiff
 	);
 
 	DEBUG (
@@ -244,7 +263,10 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		"%u|"
 		"%u"
 		" (dist %lf)",
-		highPrecisionB_BW.r, highPrecisionB_BW.g, highPrecisionB_BW.b, highPrecisionB_BWDiff
+		highPrecisionB_BW.r,
+		highPrecisionB_BW.g,
+		highPrecisionB_BW.b,
+		highPrecisionB_BWDiff
 	);
 
 	switch (findPaletteOptionWithLeastDiff (paletteOptionDiffs)) {
@@ -254,56 +276,49 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 				// entry stolen by high-precision R palette, point at other index instead
 				paletteEntry = 0xFF;
 			} else {
+				// for clarity on how these values come together to form the index
+				// clang-format off
 				paletteEntry =
-					((6 * 6 * 6) - 1) // lowest-intensity value (except see above)
+					// lowest-intensity value (except see above)
+					((6 * 6 * 6) - 1)
 					- (
+						// offset into the table
 						lowPrecisionRGB.b
 						+ (lowPrecisionRGB.g * 6)
 						+ (lowPrecisionRGB.r * 6 * 6)
 					);
+				// clang-format on
 			}
 			break;
 
 		case HIGH_PRECISION_R:
 			DEBUG ("Choosing high-precision R");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (1 * 10))
-				- highPrecisionR.r;
+			paletteEntry = (((6 * 6 * 6) - 1) + (1 * 10)) - highPrecisionR.r;
 			break;
 
 		case HIGH_PRECISION_G:
 			DEBUG ("Choosing high-precision G");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (2 * 10))
-				- highPrecisionG.g;
+			paletteEntry = (((6 * 6 * 6) - 1) + (2 * 10)) - highPrecisionG.g;
 			break;
 
 		case HIGH_PRECISION_B:
 			DEBUG ("Choosing high-precision B");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (3 * 10))
-				- highPrecisionB.b;
+			paletteEntry = (((6 * 6 * 6) - 1) + (3 * 10)) - highPrecisionB.b;
 			break;
 
 		case HIGH_PRECISION_BW_R:
 			DEBUG ("Choosing high-precision BW (based on R value)");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (4 * 10))
-				- highPrecisionR_BW.r;
+			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionR_BW.r;
 			break;
 
 		case HIGH_PRECISION_BW_G:
 			DEBUG ("Choosing high-precision BW (based on G value)");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (4 * 10))
-				- highPrecisionG_BW.g;
+			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionG_BW.g;
 			break;
 
 		case HIGH_PRECISION_BW_B:
 			DEBUG ("Choosing high-precision BW (based on B value)");
-			paletteEntry =
-				(((6 * 6 * 6) - 1) + (4 * 10))
-				- highPrecisionB_BW.b;
+			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionB_BW.b;
 			break;
 
 		case END_OF_OPTIONS:
@@ -340,7 +355,7 @@ bool openNetpbmFile (struct pam** outPamLocation, char* path) {
 	pamHandle->comment_p = NULL;
 
 	// TODO: This aborts if an error is found. I think that's kinda not nice. Catch signal & handle more gracefully?
-	pnm_readpaminit (fileHandle, pamHandle, PAM_STRUCT_SIZE(tuple_type));
+	pnm_readpaminit (fileHandle, pamHandle, PAM_STRUCT_SIZE (tuple_type));
 	DEBUG ("Netpbm file header parsed.");
 
 	DEBUG ("Width: %u", pamHandle->width);
@@ -373,11 +388,7 @@ end:
 	return ret;
 }
 
-bool checkImageParameters (
-	struct pam* primaryFile,
-	struct pam* secondaryFile,
-	struct pam* alphaFile
-) {
+bool checkImageParameters (struct pam* primaryFile, struct pam* secondaryFile, struct pam* alphaFile) {
 	bool ret = true;
 
 	if (primaryFile->width > 52)
@@ -418,11 +429,7 @@ bool checkImageParameters (
 
 	if (alphaFile != NULL) {
 		if (alphaFile->width != primaryFile->width)
-			ERROR (
-				"Alpha mask's width (%u) doesn't match primary image's width (%u)",
-				alphaFile->width,
-				primaryFile->width
-			);
+			ERROR ("Alpha mask's width (%u) doesn't match primary image's width (%u)", alphaFile->width, primaryFile->width);
 
 		if (alphaFile->height != primaryFile->height)
 			ERROR (
@@ -438,13 +445,13 @@ bool checkImageParameters (
 				DEPTH_LIMIT
 			);
 
-		if (!(
-			alphaFile->format == PBM_FORMAT || alphaFile->format == RPBM_FORMAT
-			|| alphaFile ->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT
-		))
+		if (!(alphaFile->format == PBM_FORMAT
+					|| alphaFile->format == RPBM_FORMAT
+					|| alphaFile->format == PGM_FORMAT
+					|| alphaFile->format == RPGM_FORMAT))
 			ERROR ("Netpbm file for the alpha mask must be B/W only (PBM, PGM)");
 
-		if (alphaFile ->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT)
+		if (alphaFile->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT)
 			WARN ("Greyscale alpha maps might not get displayed accurately, see project notes");
 	}
 
@@ -496,13 +503,15 @@ bool convertToPalettedRaster (struct pam* file) {
 				"%03u|"
 				"%03u|"
 				"%03u",
-				r, g, b
+				r,
+				g,
+				b
 			);
 
 			paletteEntry = getClosestColourValue ((struct intensityTuple) {
-				.r = ((double)r) / file->maxval,
-				.g = ((double)g) / file->maxval,
-				.b = ((double)b) / file->maxval,
+				.r = ((double) r) / file->maxval,
+				.g = ((double) g) / file->maxval,
+				.b = ((double) b) / file->maxval,
 			});
 			printf ("%02X", paletteEntry);
 		}
@@ -599,33 +608,31 @@ int main (int argc, char** argv) {
 
 	pm_init ((argc > 0) ? argv[0] : PROGNAME, 0);
 
-	if (!openNetpbmFile (&inputFiles[0], argv[1])) goto fail;
+	if (!openNetpbmFile (&inputFiles[0], argv[1]))
+		goto fail;
 
-	if (
-		(argc > 2)
-		&& (strcmp (argv[2], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[1], argv[2])
-	) goto fail;
+	if ((argc > 2) && (strcmp (argv[2], "none") != 0) && !openNetpbmFile (&inputFiles[1], argv[2]))
+		goto fail;
 
-	if (
-		(argc > 3)
-		&& (strcmp (argv[3], "none") != 0)
-		&& !openNetpbmFile (&inputFiles[2], argv[3])
-	) goto fail;
+	if ((argc > 3) && (strcmp (argv[3], "none") != 0) && !openNetpbmFile (&inputFiles[2], argv[3]))
+		goto fail;
 
-	if (!checkImageParameters (inputFiles[0], inputFiles[1], inputFiles[2])) goto fail;
+	if (!checkImageParameters (inputFiles[0], inputFiles[1], inputFiles[2]))
+		goto fail;
 
 	// <width><height>, printed in hex
 	printf ("%02X%02X\n", inputFiles[0]->width, inputFiles[0]->height);
 
 	// Grid 1: Normal icon
-	if (!convertToPalettedRaster (inputFiles[0])) goto fail;
+	if (!convertToPalettedRaster (inputFiles[0]))
+		goto fail;
 
 	printf ("\n");
 
 	// Grid 2: ?
 	if (inputFiles[1] != NULL) {
-		if (!convertToPalettedRaster (inputFiles[1])) goto fail;
+		if (!convertToPalettedRaster (inputFiles[1]))
+			goto fail;
 	} else {
 		generateBlankPalettedRaster (inputFiles[0]);
 	}
@@ -634,7 +641,8 @@ int main (int argc, char** argv) {
 
 	// Grid 3: Alpha mask
 	if (inputFiles[2] != NULL) {
-		if (!convertToAlphaMask (inputFiles[2])) goto fail;
+		if (!convertToAlphaMask (inputFiles[2]))
+			goto fail;
 	} else {
 		generateBlankAlphaMask (inputFiles[0]);
 	}
