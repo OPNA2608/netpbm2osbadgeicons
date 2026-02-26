@@ -25,15 +25,22 @@
 
 #include <netpbm/pam.h>
 
+#define _LOG(...) { \
+	fflush (stdout); \
+	fprintf (stderr, __VA_ARGS__); \
+	fprintf (stderr, "\n"); \
+}
+
 #ifdef NDEBUG
 #	define DEBUG(...) ((void)0)
 #else
-#	define DEBUG(...) fprintf (stderr, __VA_ARGS__)
+#	define DEBUG(...) _LOG ("DEBUG: " __VA_ARGS__);
 #endif
 
+#define WARN(...) _LOG ("WARNING: " __VA_ARGS__);
+
 #define ERROR(...) {\
-	fflush (stdout);\
-	fprintf (stderr, __VA_ARGS__);\
+	_LOG ("ERROR: " __VA_ARGS__); \
 	goto fail;\
 }
 
@@ -64,14 +71,14 @@ uint8_t getClosestColourValue (double rIntensity, double gIntensity, double bInt
 		"Intensity: "
 		"%lf|"
 		"%lf|"
-		"%lf\n",
+		"%lf",
 		rIntensity, gIntensity, bIntensity
 	);
 	DEBUG (
 		"Newval: "
 		"%u|"
 		"%u|"
-		"%u\n",
+		"%u",
 		r, g, b
 	);
 
@@ -95,17 +102,17 @@ bool openNetpbmFile (struct pam** outPamLocation, char* path) {
 	struct pam* pamHandle = NULL;
 
 	if (*outPamLocation != NULL)
-		ERROR ("Passed return location for Netpbm handle is non-NULL. Forgot to de-init & free?\n");
+		ERROR ("Passed return location for Netpbm handle is non-NULL. Forgot to de-init & free?");
 
 	pamHandle = malloc (sizeof (struct pam));
 	if (pamHandle == NULL)
-		ERROR ("Failed to allocate memory for PAM struct\n");
+		ERROR ("Failed to allocate memory for PAM struct");
 
-	DEBUG ("Opening Netpbm file: %s\n", path);
+	DEBUG ("Opening Netpbm file: %s", path);
 	fileHandle = fopen (path, "rb");
 	if (fileHandle == NULL)
-		ERROR ("Failed to open Netpbm file: %s\n", path);
-	DEBUG ("Netpbm file opened: %s\n", path);
+		ERROR ("Failed to open Netpbm file: %s", path);
+	DEBUG ("Netpbm file opened: %s", path);
 
 	pamHandle->file = NULL;
 	pamHandle->allocation_depth = 0;
@@ -113,11 +120,11 @@ bool openNetpbmFile (struct pam** outPamLocation, char* path) {
 
 	// TODO: This aborts if an error is found. I think that's kinda not nice. Catch signal & handle more gracefully?
 	pnm_readpaminit (fileHandle, pamHandle, PAM_STRUCT_SIZE(tuple_type));
-	DEBUG ("Netpbm file header parsed.\n");
+	DEBUG ("Netpbm file header parsed.");
 
-	DEBUG ("Width: %u\n", pamHandle->width);
-	DEBUG ("Height: %u\n", pamHandle->height);
-	DEBUG ("Depth: %lu\n", pamHandle->maxval);
+	DEBUG ("Width: %u", pamHandle->width);
+	DEBUG ("Height: %u", pamHandle->height);
+	DEBUG ("Depth: %lu", pamHandle->maxval);
 
 	*outPamLocation = pamHandle;
 	goto end;
@@ -153,14 +160,14 @@ bool checkImageParameters (
 	bool ret = true;
 
 	if (primaryFile->width > 52)
-		ERROR ("Primary image has invalid width (>52): %u\n", primaryFile->width);
+		ERROR ("Primary image has invalid width (>52): %u", primaryFile->width);
 
 	if (primaryFile->height > 52)
-		ERROR ("Primary image has invalid height (>52): %u\n", primaryFile->height);
+		ERROR ("Primary image has invalid height (>52): %u", primaryFile->height);
 
 	if (primaryFile->maxval > DEPTH_LIMIT)
 		ERROR (
-			"TODO: Primary image's depth (%lu) larger than what we can currently handle (%u)\n",
+			"TODO: Primary image's depth (%lu) larger than what we can currently handle (%u)",
 			primaryFile->maxval,
 			DEPTH_LIMIT
 		);
@@ -168,21 +175,21 @@ bool checkImageParameters (
 	if (secondaryFile != NULL) {
 		if (secondaryFile->width != primaryFile->width)
 			ERROR (
-				"Secondary image's width (%u) doesn't match primary image's width (%u)\n",
+				"Secondary image's width (%u) doesn't match primary image's width (%u)",
 				secondaryFile->width,
 				primaryFile->width
 			);
 
 		if (secondaryFile->height != primaryFile->height)
 			ERROR (
-				"Secondary image's height (%u) doesn't match primary image's height (%u)\n",
+				"Secondary image's height (%u) doesn't match primary image's height (%u)",
 				secondaryFile->height,
 				primaryFile->height
 			);
 
 		if (secondaryFile->maxval > 0xFF)
 			ERROR (
-				"TODO: Secondary image's depth (%lu) larger than what we can currently handle (%u)\n",
+				"TODO: Secondary image's depth (%lu) larger than what we can currently handle (%u)",
 				secondaryFile->maxval,
 				DEPTH_LIMIT
 			);
@@ -191,22 +198,22 @@ bool checkImageParameters (
 	if (alphaFile != NULL) {
 		if (alphaFile->width != primaryFile->width)
 			ERROR (
-				"Alpha mask's width (%u) doesn't match primary image's width (%u)\n",
+				"Alpha mask's width (%u) doesn't match primary image's width (%u)",
 				alphaFile->width,
 				primaryFile->width
 			);
 
 		if (alphaFile->height != primaryFile->height)
 			ERROR (
-				"Alpha mask's height (%u) doesn't match primary image's height (%u)\n",
+				"Alpha mask's height (%u) doesn't match primary image's height (%u)",
 				alphaFile->height,
 				primaryFile->height
 			);
 
 		if (alphaFile->maxval > 0xFF)
 			ERROR (
-				"TODO: Alpha mask's depth (%lu) larger than what we can currently handle (%u)\n",
-				secondaryFile->maxval,
+				"TODO: Alpha mask's depth (%lu) larger than what we can currently handle (%u)",
+				primaryFile->maxval,
 				DEPTH_LIMIT
 			);
 
@@ -214,10 +221,13 @@ bool checkImageParameters (
 			alphaFile->format == PBM_FORMAT || alphaFile->format == RPBM_FORMAT
 			|| alphaFile ->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT
 		))
-			ERROR ("Netpbm file for the alpha mask must be B/W only (PBM, PGM)\n");
+			ERROR ("Netpbm file for the alpha mask must be B/W only (PBM, PGM)");
+
+		if (alphaFile ->format == PGM_FORMAT || alphaFile->format == RPGM_FORMAT)
+			WARN ("Greyscale alpha maps might not get displayed accurately, see project notes");
 	}
 
-	DEBUG ("Checked headers of Netpbm files.\n");
+	DEBUG ("Checked headers of Netpbm files.");
 	goto end;
 
 fail:
@@ -257,14 +267,14 @@ bool convertToPalettedRaster (struct pam* file) {
 					break;
 
 				default:
-					ERROR ("Don't know convert this amount of planes: %i\n", file->depth);
+					ERROR ("Don't know convert this amount of planes: %i", file->depth);
 			}
 
 			DEBUG (
 				"Original RGB: "
 				"%03u|"
 				"%03u|"
-				"%03u\n",
+				"%03u",
 				r, g, b
 			);
 
@@ -303,6 +313,7 @@ void generateBlankPalettedRaster (struct pam* primary) {
 bool convertToAlphaMask (struct pam* file) {
 	tuple* currentInputRow = NULL;
 	int x, y;
+	double aIntensity;
 	uint8_t a;
 
 	// TODO: This allocates, so I assume it can fail. Does it abort, or return NULL?
@@ -313,13 +324,20 @@ bool convertToAlphaMask (struct pam* file) {
 		pnm_readpamrow (file, currentInputRow);
 
 		for (x = 0; x < file->width; ++x) {
-			a = currentInputRow[x][0];
+			aIntensity = ((double) currentInputRow[x][0]) / file->maxval;
 
 			DEBUG (
-				"Original alpha: "
-				"%03u\n",
-				a
+				"Original alpha intensity: "
+				"%lf",
+				aIntensity
 			);
+
+			a = round (aIntensity * 0xFF);
+			DEBUG ("Output alpha: %03u", a);
+
+			if ((a != 0) && (a != 0xFF)) {
+				DEBUG ("Alpha value %03u might get treated as %03u by hardware!", a, 0xFF);
+			}
 
 			printf ("%02X", a);
 		}
