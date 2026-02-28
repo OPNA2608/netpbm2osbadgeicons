@@ -48,7 +48,6 @@
 
 #define PROGNAME "netpbm2osbadgeicons"
 #define RASTER_COUNT 3
-#define DEPTH_LIMIT 0xFF
 
 struct intensityTuple {
 	double r;
@@ -174,16 +173,6 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 	};
 
 	uint8_t paletteEntry;
-
-	DEBUG (
-		"Input intensities: "
-		"%lf|"
-		"%lf|"
-		"%lf",
-		intensities.r,
-		intensities.g,
-		intensities.b
-	);
 
 	DEBUG (
 		"Low-precision values: "
@@ -397,13 +386,6 @@ bool checkImageParameters (struct pam* primaryFile, struct pam* secondaryFile, s
 	if (primaryFile->height > 52)
 		ERROR ("Primary image has invalid height (>52): %u", primaryFile->height);
 
-	if (primaryFile->maxval > DEPTH_LIMIT)
-		ERROR (
-			"TODO: Primary image's depth (%lu) larger than what we can currently handle (%u)",
-			primaryFile->maxval,
-			DEPTH_LIMIT
-		);
-
 	if (secondaryFile != NULL) {
 		if (secondaryFile->width != primaryFile->width)
 			ERROR (
@@ -418,13 +400,6 @@ bool checkImageParameters (struct pam* primaryFile, struct pam* secondaryFile, s
 				secondaryFile->height,
 				primaryFile->height
 			);
-
-		if (secondaryFile->maxval > 0xFF)
-			ERROR (
-				"TODO: Secondary image's depth (%lu) larger than what we can currently handle (%u)",
-				secondaryFile->maxval,
-				DEPTH_LIMIT
-			);
 	}
 
 	if (alphaFile != NULL) {
@@ -436,13 +411,6 @@ bool checkImageParameters (struct pam* primaryFile, struct pam* secondaryFile, s
 				"Alpha mask's height (%u) doesn't match primary image's height (%u)",
 				alphaFile->height,
 				primaryFile->height
-			);
-
-		if (alphaFile->maxval > 0xFF)
-			ERROR (
-				"TODO: Alpha mask's depth (%lu) larger than what we can currently handle (%u)",
-				primaryFile->maxval,
-				DEPTH_LIMIT
 			);
 
 		if (!(alphaFile->format == PBM_FORMAT
@@ -469,7 +437,8 @@ bool convertToPalettedRaster (struct pam* file) {
 	bool ret = true;
 	tuple* currentInputRow = NULL;
 	int x, y;
-	uint8_t r, g, b, paletteEntry;
+	double rIntensity, gIntensity, bIntensity;
+	uint8_t paletteEntry;
 
 	// TODO: This allocates, so I assume it can fail. Does it abort, or return NULL?
 	currentInputRow = pnm_allocpamrow (file);
@@ -482,16 +451,16 @@ bool convertToPalettedRaster (struct pam* file) {
 			switch (file->depth) {
 				case 1:
 					// only BW
-					r = currentInputRow[x][0];
-					g = currentInputRow[x][0];
-					b = currentInputRow[x][0];
+					rIntensity = ((double) currentInputRow[x][0]) / file->maxval;
+					gIntensity = ((double) currentInputRow[x][0]) / file->maxval;
+					bIntensity = ((double) currentInputRow[x][0]) / file->maxval;
 					break;
 
 				case 3:
 					// RGB
-					r = currentInputRow[x][0];
-					g = currentInputRow[x][1];
-					b = currentInputRow[x][2];
+					rIntensity = ((double) currentInputRow[x][0]) / file->maxval;
+					gIntensity = ((double) currentInputRow[x][1]) / file->maxval;
+					bIntensity = ((double) currentInputRow[x][2]) / file->maxval;
 					break;
 
 				default:
@@ -499,19 +468,19 @@ bool convertToPalettedRaster (struct pam* file) {
 			}
 
 			DEBUG (
-				"Original RGB: "
-				"%03u|"
-				"%03u|"
-				"%03u",
-				r,
-				g,
-				b
+				"Original RGB intensities: "
+				"%lf|"
+				"%lf|"
+				"%lf",
+				rIntensity,
+				gIntensity,
+				bIntensity
 			);
 
 			paletteEntry = getClosestColourValue ((struct intensityTuple) {
-				.r = ((double) r) / file->maxval,
-				.g = ((double) g) / file->maxval,
-				.b = ((double) b) / file->maxval,
+				.r = rIntensity,
+				.g = gIntensity,
+				.b = bIntensity,
 			});
 			printf ("%02X", paletteEntry);
 		}
