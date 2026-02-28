@@ -51,15 +51,15 @@
 #define DEPTH_LIMIT 0xFF
 
 struct intensityTuple {
-		double r;
-		double g;
-		double b;
+	double r;
+	double g;
+	double b;
 };
 
 struct colorTuple {
-		uint8_t r;
-		uint8_t g;
-		uint8_t b;
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
 };
 
 double distanceFromOriginalColour (
