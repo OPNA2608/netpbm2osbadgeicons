@@ -7,7 +7,7 @@ terminal, and messing with your boot files at your own risk? Then this project m
 ## Usage
 
 ```
-netpbm2osbadgeicons primary.<ppm|pgm> [<secondary.<ppm|pgm>|"none">] [<alphamask.pgm|"none">]
+netpbm2osbadgeicons primary.<ppm|pgm|pbm|...> [<secondary.<ppm|pgm|pbm|...>|"none"> [<alphamask.<pgm|pbm>|"none">]]
 ```
 
 For example:
@@ -15,7 +15,7 @@ For example:
 ```
 netpbm2osbadgeicons /home/puna/coolimage.ppm
 netpbm2osbadgeicons /home/puna/coolimage.ppm /home/puna/differentimage.ppm
-netpbm2osbadgeicons /home/puna/coolimage.ppm /home/puna/differentimage.ppm /home/puna/alphamask.pgm
+netpbm2osbadgeicons /home/puna/coolimage.ppm /home/puna/differentimage.ppm /home/puna/alphamask.pbm
 
 netpbm2osbadgeicons /dev/shm/smiley.pgm none /dev/shm/smiley-alpha.pgm
 ```
