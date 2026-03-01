@@ -92,6 +92,10 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 - Trans rights.
 - Do not use LLMs in any way. Go away.
 
+## Project Homepage
+
+https://github.com/OPNA2608/netpbm2osbadgeicons
+
 ## License
 
 This software is licensed as GPL-3.0-or-later. See `LICENSE.txt` in the root of the repository for the full text of the
