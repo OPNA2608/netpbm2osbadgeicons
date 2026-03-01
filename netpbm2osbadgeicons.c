@@ -87,7 +87,7 @@ enum paletteOption {
 	END_OF_OPTIONS
 };
 
-enum paletteOption findPaletteOptionWithLeastDiff (double options[END_OF_OPTIONS]) {
+enum paletteOption findPaletteOptionWithLeastDiff (const double options[END_OF_OPTIONS]) {
 	enum paletteOption lowestOption = END_OF_OPTIONS;
 	double lowestDiff = 100.;
 	unsigned int i;
