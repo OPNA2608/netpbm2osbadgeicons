@@ -4,6 +4,8 @@ Hey you! Yes, *you*! Do you have an Apple PowerMac G5? Would you like to customi
 open the boot manager by holding your Alt / Option key? And are you not afraid of compiling software, using the
 terminal, and messing with your boot files at your own risk? Then this project might be for you! :)
 
+For example photos of conversions, check the wiki on GitHub.
+
 ## Usage
 
 ```
