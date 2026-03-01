@@ -47,7 +47,12 @@
 	}
 
 #define PROGNAME "netpbm2osbadgeicons"
-#define RASTER_COUNT 3
+
+enum {
+	RASTER_COUNT = 3,
+	STEPS_LOWPRECISION = 6,
+	STEPS_HIGHPRECISION = 10
+};
 
 struct intensityTuple {
 	double r;
@@ -113,27 +118,27 @@ enum paletteOption findPaletteOptionWithLeastDiff (double options[END_OF_OPTIONS
 */
 uint8_t getClosestColourValue (struct intensityTuple intensities) {
 	struct colorTuple lowPrecisionRGB = {
-		.r = (uint8_t) (round ((6 - 1) * intensities.r)),
-		.g = (uint8_t) (round ((6 - 1) * intensities.g)),
-		.b = (uint8_t) (round ((6 - 1) * intensities.b)),
+		.r = (uint8_t) (round ((STEPS_LOWPRECISION - 1) * intensities.r)),
+		.g = (uint8_t) (round ((STEPS_LOWPRECISION - 1) * intensities.g)),
+		.b = (uint8_t) (round ((STEPS_LOWPRECISION - 1) * intensities.b)),
 	};
 
 	struct colorTuple highPrecisionR = {
-		.r = (uint8_t) (round ((10 - 1) * intensities.r)),
+		.r = (uint8_t) (round ((STEPS_HIGHPRECISION - 1) * intensities.r)),
 		.g = 0,
 		.b = 0,
 	};
 
 	struct colorTuple highPrecisionG = {
 		.r = 0,
-		.g = (uint8_t) (round ((10 - 1) * intensities.g)),
+		.g = (uint8_t) (round ((STEPS_HIGHPRECISION - 1) * intensities.g)),
 		.b = 0,
 	};
 
 	struct colorTuple highPrecisionB = {
 		.r = 0,
 		.g = 0,
-		.b = (uint8_t) (round ((10 - 1) * intensities.b)),
+		.b = (uint8_t) (round ((STEPS_HIGHPRECISION - 1) * intensities.b)),
 	};
 
 	struct colorTuple highPrecisionR_BW = {
@@ -154,13 +159,13 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		.b = highPrecisionB.b,
 	};
 
-	double lowPrecisionRGBDiff = distanceFromOriginalColour (lowPrecisionRGB, 6 - 1, intensities);
-	double highPrecisionRDiff = distanceFromOriginalColour (highPrecisionR, 10 - 1, intensities);
-	double highPrecisionGDiff = distanceFromOriginalColour (highPrecisionG, 10 - 1, intensities);
-	double highPrecisionBDiff = distanceFromOriginalColour (highPrecisionB, 10 - 1, intensities);
-	double highPrecisionR_BWDiff = distanceFromOriginalColour (highPrecisionR_BW, 10 - 1, intensities);
-	double highPrecisionG_BWDiff = distanceFromOriginalColour (highPrecisionG_BW, 10 - 1, intensities);
-	double highPrecisionB_BWDiff = distanceFromOriginalColour (highPrecisionB_BW, 10 - 1, intensities);
+	double lowPrecisionRGBDiff = distanceFromOriginalColour (lowPrecisionRGB, STEPS_LOWPRECISION - 1, intensities);
+	double highPrecisionRDiff = distanceFromOriginalColour (highPrecisionR, STEPS_HIGHPRECISION - 1, intensities);
+	double highPrecisionGDiff = distanceFromOriginalColour (highPrecisionG, STEPS_HIGHPRECISION - 1, intensities);
+	double highPrecisionBDiff = distanceFromOriginalColour (highPrecisionB, STEPS_HIGHPRECISION - 1, intensities);
+	double highPrecisionR_BWDiff = distanceFromOriginalColour (highPrecisionR_BW, STEPS_HIGHPRECISION - 1, intensities);
+	double highPrecisionG_BWDiff = distanceFromOriginalColour (highPrecisionG_BW, STEPS_HIGHPRECISION - 1, intensities);
+	double highPrecisionB_BWDiff = distanceFromOriginalColour (highPrecisionB_BW, STEPS_HIGHPRECISION - 1, intensities);
 
 	double paletteOptionDiffs[] = {
 		lowPrecisionRGBDiff,
@@ -172,7 +177,7 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 		highPrecisionB_BWDiff,
 	};
 
-	uint8_t paletteEntry;
+	uint8_t paletteEntry = 0x00;
 
 	DEBUG (
 		"Low-precision values: "
@@ -269,12 +274,12 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 				// clang-format off
 				paletteEntry =
 					// lowest-intensity value (except see above)
-					((6 * 6 * 6) - 1)
+					((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1)
 					- (
 						// offset into the table
 						lowPrecisionRGB.b
-						+ (lowPrecisionRGB.g * 6)
-						+ (lowPrecisionRGB.r * 6 * 6)
+						+ (lowPrecisionRGB.g * STEPS_LOWPRECISION)
+						+ (lowPrecisionRGB.r * STEPS_LOWPRECISION * STEPS_LOWPRECISION)
 					);
 				// clang-format on
 			}
@@ -282,32 +287,38 @@ uint8_t getClosestColourValue (struct intensityTuple intensities) {
 
 		case HIGH_PRECISION_R:
 			DEBUG ("Choosing high-precision R");
-			paletteEntry = (((6 * 6 * 6) - 1) + (1 * 10)) - highPrecisionR.r;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (1 * STEPS_HIGHPRECISION))
+				- highPrecisionR.r;
 			break;
 
 		case HIGH_PRECISION_G:
 			DEBUG ("Choosing high-precision G");
-			paletteEntry = (((6 * 6 * 6) - 1) + (2 * 10)) - highPrecisionG.g;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (2 * STEPS_HIGHPRECISION))
+				- highPrecisionG.g;
 			break;
 
 		case HIGH_PRECISION_B:
 			DEBUG ("Choosing high-precision B");
-			paletteEntry = (((6 * 6 * 6) - 1) + (3 * 10)) - highPrecisionB.b;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (3 * STEPS_HIGHPRECISION))
+				- highPrecisionB.b;
 			break;
 
 		case HIGH_PRECISION_BW_R:
 			DEBUG ("Choosing high-precision BW (based on R value)");
-			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionR_BW.r;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (4 * STEPS_HIGHPRECISION))
+				- highPrecisionR_BW.r;
 			break;
 
 		case HIGH_PRECISION_BW_G:
 			DEBUG ("Choosing high-precision BW (based on G value)");
-			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionG_BW.g;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (4 * STEPS_HIGHPRECISION))
+				- highPrecisionG_BW.g;
 			break;
 
 		case HIGH_PRECISION_BW_B:
 			DEBUG ("Choosing high-precision BW (based on B value)");
-			paletteEntry = (((6 * 6 * 6) - 1) + (4 * 10)) - highPrecisionB_BW.b;
+			paletteEntry = (((STEPS_LOWPRECISION * STEPS_LOWPRECISION * STEPS_LOWPRECISION) - 1) + (4 * STEPS_HIGHPRECISION))
+				- highPrecisionB_BW.b;
 			break;
 
 		case END_OF_OPTIONS:
