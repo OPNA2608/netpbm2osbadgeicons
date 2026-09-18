@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.19) # file (REAL_PATH ...)
 
 file (STRINGS version VERSION_RAW)
 string (STRIP "${VERSION_RAW}" VERSION_STRIPPED)
@@ -11,9 +11,10 @@ project (netpbm2osbadgeicons
 )
 
 # Set allowed values for CMAKE_BUILD_TYPE
-set (ALLOWED_BUILD_TYPES "Debug;RelWithDebInfo;Release")
+set (ALLOWED_BUILD_TYPES "Debug;RelWithDebInfo;Release;Coverage")
 set (CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "${ALLOWED_BUILD_TYPES}" FORCE)
 set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "${ALLOWED_BUILD_TYPES}")
+set (CMAKE_BUILD_TYPE_ORIGINAL "${CMAKE_BUILD_TYPE}")
 
 # Check CMAKE_BUILD_TYPE
 string (TOUPPER "${ALLOWED_BUILD_TYPES}" ALLOWED_BUILD_TYPES_UPPER)
@@ -21,6 +22,16 @@ string (TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 string (FIND "${ALLOWED_BUILD_TYPES_UPPER}" "${CMAKE_BUILD_TYPE_UPPER}" BUILDTYPE_POS_IN_ALLOWLIST)
 if (BUILDTYPE_POS_IN_ALLOWLIST LESS 0)
   message (FATAL_ERROR "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} not in list of allowed types: ${ALLOWED_BUILD_TYPES}")
+endif()
+
+# Coverage -> Debug
+if (CMAKE_BUILD_TYPE_UPPER STREQUAL COVERAGE)
+  if (NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    message (
+      FATAL_ERROR
+      "Coverage reporting is currently only available with GCC (gcov). Detected compiler is: ${CMAKE_C_COMPILER_ID}")
+  endif()
+  set (CMAKE_BUILD_TYPE "Debug" CACHE STRING "${ALLOWED_BUILD_TYPES}" FORCE)
 endif()
 
 set (CMAKE_C_STANDARD 99)
@@ -31,6 +42,7 @@ include (CTest)
 include (GNUInstallDirs)
 
 set (PRIVATE_COMPILE_OPTIONS)
+set (PRIVATE_LINK_OPTIONS)
 
 if (MSVC)
   list (APPEND PRIVATE_COMPILE_OPTIONS "/W4")
@@ -40,6 +52,11 @@ else()
     "-Wextra"
     "-pedantic"
   )
+endif()
+
+if (CMAKE_BUILD_TYPE_ORIGINAL STREQUAL "Coverage")
+  list (APPEND PRIVATE_COMPILE_OPTIONS "--coverage")
+  list (APPEND PRIVATE_LINK_OPTIONS "--coverage")
 endif()
 
 option (NETPBM2OSBADGEICONS_WERROR "Treat warnings as errors" OFF)
@@ -77,6 +94,10 @@ target_compile_options ("${PROJECT_NAME}"
 
 target_include_directories ("${PROJECT_NAME}"
   PRIVATE "${NETPBM_INCLUDE_DIR}"
+)
+
+target_link_options ("${PROJECT_NAME}"
+  PRIVATE "${PRIVATE_LINK_OPTIONS}"
 )
 
 target_link_libraries ("${PROJECT_NAME}"

@@ -7,7 +7,8 @@ set (TESTDIRS)
 
 foreach (TESTDIR IN LISTS TESTDIRS_RAW)
   if (IS_DIRECTORY "${TESTDIR}")
-    list (APPEND TESTDIRS "${TESTDIR}")
+    file (REAL_PATH "${TESTDIR}" TESTDIR_ABSOLUTE)
+    list (APPEND TESTDIRS "${TESTDIR_ABSOLUTE}")
   endif()
 endforeach()
 
@@ -25,24 +26,24 @@ foreach (TESTDIR_FULL IN LISTS TESTDIRS)
   endif()
 
   set (TESTARGS)
-  list (APPEND TESTARGS "${TESTDIR}/primary")
+  list (APPEND TESTARGS "${TESTDIR_FULL}/primary")
 
   if (EXISTS "${TESTDIR_FULL}/alpha")
     if (EXISTS "${TESTDIR_FULL}/secondary")
-      list (APPEND TESTARGS "${TESTDIR}/secondary")
+      list (APPEND TESTARGS "${TESTDIR_FULL}/secondary")
     else()
       list (APPEND TESTARGS "none")
     endif()
-    list (APPEND TESTARGS "${TESTDIR}/alpha")
+    list (APPEND TESTARGS "${TESTDIR_FULL}/alpha")
   else()
     if (EXISTS "${TESTDIR_FULL}/secondary")
-      list (APPEND TESTARGS "${TESTDIR}/secondary")
+      list (APPEND TESTARGS "${TESTDIR_FULL}/secondary")
     endif()
   endif()
 
   add_test (NAME "${TESTDIR}"
     COMMAND "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
   )
   if (TEST_TYPE STREQUAL "failure")
     set_property (TEST "${TESTDIR}"
@@ -63,7 +64,7 @@ foreach (TESTDIR_FULL IN LISTS TESTDIRS)
           --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all
           --error-exitcode=205
         "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
   endif()
 endforeach()
