@@ -25,6 +25,7 @@ stdenv.mkDerivation (finalAttrs: {
         "CMakeLists.txt"
         "version"
         "netpbm2osbadgeicons.c"
+        "netpbm2osbadgeicons.h"
       ];
     in
     runCommand "netpbm2osbadgeicons-src" { } (

@@ -2,9 +2,82 @@ if (NETPBM2OSBADGEICONS_TEST_VALGRIND)
   add_executable (valgrind-checker valgrind-checker.c)
 endif()
 
+list (APPEND VALGRIND_ARGS
+  --show-error-list=yes
+  --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all
+  --error-exitcode=205
+)
+
 file (GLOB TESTDIRS_RAW "*")
 set (TESTDIRS)
 
+# Manually: Awkward to automate
+add_test (NAME "none-prints-usage"
+  COMMAND "$<TARGET_FILE:${PROJECT_NAME}>"
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+if (NETPBM2OSBADGEICONS_TEST_VALGRIND)
+  add_test (NAME "valgrind-none-prints-usage"
+    COMMAND
+      "$<TARGET_FILE:valgrind-checker>"
+        ${VALGRIND_BIN} ${VALGRIND_ARGS}
+        "$<TARGET_FILE:${PROJECT_NAME}>"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+endif()
+
+add_test (NAME "toomany-prints-usage"
+  COMMAND
+    "$<TARGET_FILE:${PROJECT_NAME}>"
+      ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+      ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+      ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+      ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+if (NETPBM2OSBADGEICONS_TEST_VALGRIND)
+  add_test (NAME "valgrind-toomany-prints-usage"
+    COMMAND
+      "$<TARGET_FILE:valgrind-checker>"
+        ${VALGRIND_BIN} ${VALGRIND_ARGS}
+        "$<TARGET_FILE:${PROJECT_NAME}>"
+          ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+          ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+          ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+          ${CMAKE_CURRENT_BINARY_DIR}/small.pgm
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+  )
+endif()
+
+add_test (NAME "missing-p"
+  COMMAND "$<TARGET_FILE:${PROJECT_NAME}>" ${CMAKE_CURRENT_SOURCE_DIR}/missing
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+set_property (TEST "missing-p"
+  PROPERTY WILL_FAIL TRUE
+)
+
+add_test (NAME "missing-s"
+  COMMAND "$<TARGET_FILE:${PROJECT_NAME}>" ${CMAKE_CURRENT_SOURCE_DIR}/test.ppm ${CMAKE_CURRENT_SOURCE_DIR}/missing
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+set_property (TEST "missing-s"
+  PROPERTY WILL_FAIL TRUE
+)
+
+add_test (NAME "missing-a"
+  COMMAND
+    "$<TARGET_FILE:${PROJECT_NAME}>"
+      ${CMAKE_CURRENT_SOURCE_DIR}/test.ppm
+      ${CMAKE_CURRENT_SOURCE_DIR}/test.ppm
+      ${CMAKE_CURRENT_SOURCE_DIR}/missing
+  WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+set_property (TEST "missing-a"
+  PROPERTY WILL_FAIL TRUE
+)
+
+# Automatically
 foreach (TESTDIR IN LISTS TESTDIRS_RAW)
   if (IS_DIRECTORY "${TESTDIR}")
     file (REAL_PATH "${TESTDIR}" TESTDIR_ABSOLUTE)
@@ -59,11 +132,8 @@ foreach (TESTDIR_FULL IN LISTS TESTDIRS)
     add_test (NAME "valgrind-${TESTDIR}"
       COMMAND
         "$<TARGET_FILE:valgrind-checker>"
-        ${VALGRIND_BIN}
-          --show-error-list=yes
-          --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all
-          --error-exitcode=205
-        "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
+          ${VALGRIND_BIN} ${VALGRIND_ARGS}
+          "$<TARGET_FILE:${PROJECT_NAME}>" ${TESTARGS}
       WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
     )
   endif()

@@ -16,6 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include "netpbm2osbadgeicons.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,47 +26,6 @@
 
 #include <math.h>
 #include <netpbm/pam.h>
-
-#define _LOG(...) \
-	{ \
-		fflush (stdout); \
-		fprintf (stderr, __VA_ARGS__); \
-		fprintf (stderr, "\n"); \
-	}
-
-#ifdef NDEBUG
-#	define DEBUG(...) ((void) 0)
-#else
-#	define DEBUG(...) _LOG ("DEBUG: " __VA_ARGS__);
-#endif
-
-#define WARN(...) _LOG ("WARNING: " __VA_ARGS__);
-
-#define ERROR(...) \
-	{ \
-		_LOG ("ERROR: " __VA_ARGS__); \
-		goto fail; \
-	}
-
-#define PROGNAME "netpbm2osbadgeicons"
-
-enum {
-	RASTER_COUNT = 3,
-	STEPS_LOWPRECISION = 6,
-	STEPS_HIGHPRECISION = 10
-};
-
-struct intensityTuple {
-	double r;
-	double g;
-	double b;
-};
-
-struct colorTuple {
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
-};
 
 double distanceFromOriginalColour (
 	struct colorTuple calculatedColour,
@@ -75,17 +36,6 @@ double distanceFromOriginalColour (
 		+ fabs (((double) calculatedColour.g / newIntensityMax) - originalIntensities.g)
 		+ fabs (((double) calculatedColour.b / newIntensityMax) - originalIntensities.b);
 }
-
-enum paletteOption {
-	LOW_PRECISION_RGB,
-	HIGH_PRECISION_R,
-	HIGH_PRECISION_G,
-	HIGH_PRECISION_B,
-	HIGH_PRECISION_BW_R,
-	HIGH_PRECISION_BW_G,
-	HIGH_PRECISION_BW_B,
-	END_OF_OPTIONS
-};
 
 enum paletteOption findPaletteOptionWithLeastDiff (const double options[END_OF_OPTIONS]) {
 	enum paletteOption lowestOption = END_OF_OPTIONS;
@@ -336,9 +286,6 @@ bool openNetpbmFile (struct pam** outPamLocation, char* path) {
 	bool ret = true;
 	FILE* fileHandle = NULL;
 	struct pam* pamHandle = NULL;
-
-	if (*outPamLocation != NULL)
-		ERROR ("Passed return location for Netpbm handle is non-NULL. Forgot to de-init & free?");
 
 	pamHandle = malloc (sizeof (struct pam));
 	if (pamHandle == NULL)
@@ -594,7 +541,7 @@ int main (int argc, char** argv) {
 	if ((argc > 2) && (strcmp (argv[2], "none") != 0) && !openNetpbmFile (&inputFiles[1], argv[2]))
 		goto fail;
 
-	if ((argc > 3) && (strcmp (argv[3], "none") != 0) && !openNetpbmFile (&inputFiles[2], argv[3]))
+	if ((argc == 4) && (strcmp (argv[3], "none") != 0) && !openNetpbmFile (&inputFiles[2], argv[3]))
 		goto fail;
 
 	if (!checkImageParameters (inputFiles[0], inputFiles[1], inputFiles[2]))
